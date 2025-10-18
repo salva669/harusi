@@ -1,0 +1,147 @@
+.task-stats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+  }
+  
+  .stat-filter {
+    padding: 10px 15px;
+    background-color: #e5e7eb;
+    color: #1f2937;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  
+  .stat-filter.active {
+    background-color: #3b82f6;
+    color: white;
+  }
+  
+  .stat-filter:hover {
+    background-color: #3b82f6;
+    color: white;
+  }
+  
+  .task-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+  }
+  
+  .task-card {
+    border-left: 4px solid;
+    border-radius: 8px;
+  }
+  
+  .task-card.priority-urgent {
+    border-left-color: #dc2626;
+    background-color: #fef2f2;
+  }
+  
+  .task-card.priority-high {
+    border-left-color: #f59e0b;
+    background-color: #fffbeb;
+  }
+  
+  .task-card.priority-medium {
+    border-left-color: #3b82f6;
+    background-color: #f0f9ff;
+  }
+  
+  .task-card.priority-low {
+    border-left-color: #10b981;
+    background-color: #f0fdf4;
+  }
+  
+  .task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+  }
+  
+  .task-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex: 1;
+  }
+  
+  .task-title h3 {
+    margin: 0;
+    color: #1f2937;
+  }
+  
+  .priority-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+  
+  .priority-badge.urgent {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+  
+  .priority-badge.high {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+  
+  .priority-badge.medium {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .priority-badge.low {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+  
+  .task-description {
+    color: #6b7280;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+  
+  .status-select {
+    width: 100%;
+    margin-bottom: 15px !important;
+    padding: 8px;
+  }
+  
+  .task-actions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .task-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+  }
+  
+  .task-form {
+    margin-bottom: 30px;
+    border: 2px solid #fef08a;
+  }
+  
+  .task-form h3 {
+    margin-bottom: 20px;
+    color: #1f2937;
+  }
