@@ -16,9 +16,40 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.authtoken.views import obtain_auth_token
+from django.contrib.auth.models import User
+from rest_framework import serializers, viewsets
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+
+@api_view(['GET'])
+def get_user(request):
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+def register(request):
+    username = request.data.get('username')
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    if User.objects.filter(username=username).exists():
+        return Response({'username': ['Username already exists']}, status=400)
+    
+    user = User.objects.create_user(username=username, email=email, password=password)
+    return Response({'id': user.id, 'username': user.username, 'email': user.email})
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('weddings.urls')),
     path('api-auth/', include('rest_framework.urls')),
+    path('api/auth-token/', obtain_auth_token, name='auth_token'),
+    path('api/user/', get_user, name='get_user'),
+    path('api/register/', register, name='register'),
 ]
