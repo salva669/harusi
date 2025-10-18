@@ -36,3 +36,45 @@
     transform: rotate(360deg);
   }
 }
+
+body {
+  background-color: #f9fafb;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wedding-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .guest-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .task-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .navbar-container {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .navbar-menu {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  button {
+    width: 100%;
+  }
+}
