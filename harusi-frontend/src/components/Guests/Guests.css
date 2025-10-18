@@ -1,0 +1,106 @@
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+  }
+  
+  .stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  
+  .stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .stat-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+  }
+  
+  .guest-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+  }
+  
+  .guest-card {
+    border: 1px solid #e5e7eb;
+  }
+  
+  .guest-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+  }
+  
+  .guest-header h3 {
+    margin: 0;
+    color: #1f2937;
+  }
+  
+  .guest-meta {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 5px 0 0 0;
+  }
+  
+  .rsvp-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .rsvp-badge.confirmed {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+  
+  .rsvp-badge.pending {
+    background-color: #fef08a;
+    color: #713f12;
+  }
+  
+  .rsvp-badge.declined {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+  
+  .guest-details {
+    margin-bottom: 15px;
+  }
+  
+  .guest-details p {
+    margin: 8px 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+  
+  .guest-actions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .guest-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+  }
+  
+  .guest-form {
+    margin-bottom: 30px;
+    border: 2px solid #dbeafe;
+  }
+  
+  .guest-form h3 {
+    margin-bottom: 20px;
+    color: #1f2937;
+  }
