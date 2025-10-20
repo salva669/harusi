@@ -17,6 +17,15 @@ from .pdf_views import (
     download_vendor_list_pdf,
     download_invitation_pdf,
 )
+from .analytics_views import (
+    get_analytics,
+    get_trend_data,
+    create_snapshot,
+    get_category_breakdown,
+    get_timeline_status,
+    get_guest_analytics,
+    get_health_scores
+)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -85,4 +94,12 @@ urlpatterns = [
 
     path('weddings/<int:wedding_id>/email/rsvp-reminders/', send_rsvp_reminders, name='send-rsvp'),
     path('weddings/<int:wedding_id>/email/send-invitations/', send_invitations, name='send-invitations'),
+
+    path('weddings/<int:wedding_id>/analytics/', get_analytics, name='analytics'),
+    path('weddings/<int:wedding_id>/analytics/trends/', get_trend_data, name='trends'),
+    path('weddings/<int:wedding_id>/analytics/snapshot/', create_snapshot, name='snapshot'),
+    path('weddings/<int:wedding_id>/analytics/budget-breakdown/', get_category_breakdown, name='budget-breakdown'),
+    path('weddings/<int:wedding_id>/analytics/timeline-status/', get_timeline_status, name='timeline-status'),
+    path('weddings/<int:wedding_id>/analytics/guest-analytics/', get_guest_analytics, name='guest-analytics'),
+    path('weddings/<int:wedding_id>/analytics/health-scores/', get_health_scores, name='health-scores'),
 ]
