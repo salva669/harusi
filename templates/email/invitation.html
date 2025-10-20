@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Georgia', serif; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; border-radius: 8px; text-align: center; }
+        .header h1 { margin: 0; font-size: 2em; }
+        .content { padding: 30px; background: white; border: 2px solid #e5e7eb; margin-top: 20px; }
+        .detail { margin: 15px 0; }
+        .detail strong { color: #667eea; }
+        .button { background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{ guest_name }},</p>
+            <p>{{ description }}</p>
+            
+            <div class="detail">
+                <strong>Ceremony:</strong><br>
+                {{ ceremony_time|time:"g:i A" }} at {{ ceremony_location }}
+            </div>
+            
+            <div class="detail">
+                <strong>Reception:</strong><br>
+                {{ reception_time|time:"g:i A" }} at {{ reception_location }}
+            </div>
+            
+            {% if dress_code %}
+            <div class="detail">
+                <strong>Dress Code:</strong> {{ dress_code }}
+            </div>
+            {% endif %}
+            
+            {% if rsvp_deadline %}
+            <div class="detail">
+                <strong>RSVP by:</strong> {{ rsvp_deadline|date:"F j, Y" }}
+            </div>
+            {% endif %}
+            
+            <p>{{ custom_message }}</p>
+            
+            <p>To confirm your attendance, please email: <a href="mailto:{{ rsvp_email }}">{{ rsvp_email }}</a></p>
+        </div>
+    </div>
+</body>
+</html>

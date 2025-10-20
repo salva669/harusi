@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; }
+        .content { padding: 20px; background: #f9fafb; }
+        .button { background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💒 RSVP Reminder</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{ guest_name }},</p>
+            <p>This is a friendly reminder about the upcoming wedding of:</p>
+            <h2>{{ bride_name }} & {{ groom_name }}</h2>
+            <p><strong>Date:</strong> {{ wedding_date|date:"F j, Y" }}</p>
+            <p><strong>Venue:</strong> {{ venue }}</p>
+            <p>We would love to have your confirmation! Please let us know if you can make it.</p>
+            <p>Warm regards,<br>The Couple</p>
+        </div>
+    </div>
+</body>
+</html>
