@@ -5,6 +5,14 @@ from .views import (
     PhotoGalleryViewSet, PhotoViewSet, TimelineViewSet,
     VendorViewSet, InvitationTemplateViewSet
 )
+from .pdf_views import (
+    download_guest_list_pdf,
+    download_budget_report_pdf,
+    download_timeline_pdf,
+    download_vendor_list_pdf,
+    download_invitation_pdf,
+)
+
 router = DefaultRouter()
 router.register(r'weddings', WeddingViewSet, basename='wedding')
 
@@ -35,4 +43,10 @@ urlpatterns = [
     
     path('weddings/<int:wedding_id>/invitation/', InvitationTemplateViewSet.as_view({'get': 'list', 'post': 'create'}), name='invitation-list'),
     path('weddings/<int:wedding_id>/invitation/<int:pk>/', InvitationTemplateViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='invitation-detail'),
+
+    path('weddings/<int:wedding_id>/pdf/guest-list/', download_guest_list_pdf, name='pdf-guest-list'),
+    path('weddings/<int:wedding_id>/pdf/budget/', download_budget_report_pdf, name='pdf-budget'),
+    path('weddings/<int:wedding_id>/pdf/timeline/', download_timeline_pdf, name='pdf-timeline'),
+    path('weddings/<int:wedding_id>/pdf/vendors/', download_vendor_list_pdf, name='pdf-vendors'),
+    path('weddings/<int:wedding_id>/pdf/invitation/', download_invitation_pdf, name='pdf-invitation'),
 ]
