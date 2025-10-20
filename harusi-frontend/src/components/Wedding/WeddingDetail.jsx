@@ -5,6 +5,11 @@ import { Loading } from '../Common/Loading';
 import { GuestList } from '../Guests/GuestList';
 import { TaskList } from '../Tasks/TaskList';
 import { BudgetSummary } from '../Budget/BudgetSummary';
+import { PhotoGallery } from '../Gallery/PhotoGallery';  
+import { Timeline } from '../Timeline/Timeline';          
+import { VendorList } from '../Vendors/VendorList';
+import { PDFDownloads } from '../Reports/PDFDownloads';  
+import { AnalyticsDashboard } from '../Analytics/AnalyticsDashboard';
 import './Wedding.css';
 
 export const WeddingDetail = () => {
