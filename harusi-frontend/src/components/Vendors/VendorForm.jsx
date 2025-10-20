@@ -14,7 +14,7 @@ export const VendorForm = ({ weddingId, vendor, onSave, onCancel }) => {
     deposit_paid: '',
     final_amount: '',
     status: 'inquiry',
-    notes: '',
+    vendor_notes: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -174,13 +174,13 @@ export const VendorForm = ({ weddingId, vendor, onSave, onCancel }) => {
       <div className="form-group">
         <label>Notes</label>
         <textarea
-          name="notes"
-          value={formData.notes}
-          onChange={handleChange}
-          rows="3"
-          placeholder="Add any notes about this vendor..."
+            name="vendor_notes"  
+            value={formData.vendor_notes}
+            onChange={handleChange}
+            rows="3"
+            placeholder="Add any notes about this vendor..."
         />
-      </div>
+        </div>
 
       <div className="form-actions">
         <button type="submit" className="primary" disabled={loading}>

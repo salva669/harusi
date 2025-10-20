@@ -78,7 +78,7 @@ class VendorNoteSerializer(serializers.ModelSerializer):
 
 
 class VendorSerializer(serializers.ModelSerializer):
-    notes = VendorNoteSerializer(many=True, read_only=True)
+    note_entries = VendorNoteSerializer(many=True, read_only=True)
     remaining_amount = serializers.SerializerMethodField()
     
     def get_remaining_amount(self, obj):

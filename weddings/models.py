@@ -214,7 +214,7 @@ class Vendor(models.Model):
     deposit_paid = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     final_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inquiry')
-    notes = models.TextField(blank=True)
+    vendor_notes = models.TextField(blank=True)  # ← CHANGED FROM 'notes' to 'vendor_notes'
     contract_file = models.FileField(upload_to='vendor_contracts/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -227,7 +227,7 @@ class Vendor(models.Model):
 
 
 class VendorNote(models.Model):
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='notes')
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='note_entries')
     content = models.TextField()
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

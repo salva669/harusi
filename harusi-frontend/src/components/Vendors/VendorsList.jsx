@@ -65,7 +65,7 @@ export const VendorList = ({ weddingId }) => {
           {showForm ? '✕ Cancel' : '+ Add Vendor'}
         </button>
       </div>
-
+  
       {showForm && (
         <VendorForm 
           weddingId={weddingId}
@@ -74,7 +74,7 @@ export const VendorList = ({ weddingId }) => {
           onCancel={() => { setShowForm(false); setEditingVendor(null); }}
         />
       )}
-
+  
       <div className="vendor-filters">
         <button 
           className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
@@ -107,7 +107,7 @@ export const VendorList = ({ weddingId }) => {
           Completed ({statuses.completed})
         </button>
       </div>
-
+  
       {filteredVendors.length === 0 ? (
         <div className="empty-state">
           <p>No vendors found</p>
@@ -125,23 +125,35 @@ export const VendorList = ({ weddingId }) => {
                   {vendor.status}
                 </span>
               </div>
-
+  
               <div className="vendor-contact">
                 <p><strong>Contact:</strong> {vendor.contact_person}</p>
                 <p>📱 {vendor.phone}</p>
                 <p>✉️ {vendor.email}</p>
                 {vendor.website && <p><a href={vendor.website} target="_blank" rel="noopener noreferrer">🌐 Website</a></p>}
               </div>
-
+  
               <div className="vendor-pricing">
                 {vendor.quote && <p>Quote: TZS {vendor.quote.toLocaleString()}</p>}
                 {vendor.deposit_paid && <p>Deposit: TZS {vendor.deposit_paid.toLocaleString()}</p>}
                 {vendor.final_amount && <p>Final: TZS {vendor.final_amount.toLocaleString()}</p>}
                 {vendor.remaining_amount && <p className="remaining">Remaining: TZS {vendor.remaining_amount.toLocaleString()}</p>}
               </div>
-
-              {vendor.notes && <p className="vendor-notes"><strong>Notes:</strong> {vendor.notes}</p>}
-
+  
+              {vendor.vendor_notes && <p className="vendor-notes"><strong>Notes:</strong> {vendor.vendor_notes}</p>}
+  
+              {vendor.note_entries && vendor.note_entries.length > 0 && (
+                <div className="vendor-note-entries">
+                  <h4>Additional Notes:</h4>
+                  {vendor.note_entries.map(note => (
+                    <div key={note.id} className="note-entry">
+                      <p>{note.content}</p>
+                      <small>by {note.created_by_username} on {new Date(note.created_at).toLocaleDateString()}</small>
+                    </div>
+                  ))}
+                </div>
+              )}
+  
               <div className="vendor-actions">
                 <button 
                   className="secondary" 
