@@ -1,4 +1,9 @@
 from django.urls import path, include
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .email_service import WeddingEmailService
+from .models import Guest, InvitationTemplate, Vendor
 from rest_framework.routers import DefaultRouter
 from .views import (
     WeddingViewSet, GuestViewSet, TaskViewSet, BudgetViewSet,
@@ -12,6 +17,34 @@ from .pdf_views import (
     download_vendor_list_pdf,
     download_invitation_pdf,
 )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_rsvp_reminders(request, wedding_id):
+    from .models import Wedding
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    guests = wedding.guests.filter(rsvp_status='pending')
+    
+    count = 0
+    for guest in guests:
+        if WeddingEmailService.send_rsvp_reminder(guest):
+            count += 1
+    
+    return Response({'sent': count, 'total': guests.count()})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_invitations(request, wedding_id):
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    invitation = get_object_or_404(InvitationTemplate, wedding=wedding)
+    guests = wedding.guests.all()
+    
+    count = 0
+    for guest in guests:
+        if WeddingEmailService.send_invitation_email(guest, invitation):
+            count += 1
+    
+    return Response({'sent': count, 'total': guests.count()})
 
 router = DefaultRouter()
 router.register(r'weddings', WeddingViewSet, basename='wedding')
@@ -49,4 +82,7 @@ urlpatterns = [
     path('weddings/<int:wedding_id>/pdf/timeline/', download_timeline_pdf, name='pdf-timeline'),
     path('weddings/<int:wedding_id>/pdf/vendors/', download_vendor_list_pdf, name='pdf-vendors'),
     path('weddings/<int:wedding_id>/pdf/invitation/', download_invitation_pdf, name='pdf-invitation'),
+
+    path('weddings/<int:wedding_id>/email/rsvp-reminders/', send_rsvp_reminders, name='send-rsvp'),
+    path('weddings/<int:wedding_id>/email/send-invitations/', send_invitations, name='send-invitations'),
 ]
