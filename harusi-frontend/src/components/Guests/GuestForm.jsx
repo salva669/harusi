@@ -30,7 +30,7 @@ export const GuestForm = ({ weddingId, guest, onSave, onCancel }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
+  
     try {
       if (guest) {
         await guestAPI.update(weddingId, guest.id, formData);
@@ -39,6 +39,7 @@ export const GuestForm = ({ weddingId, guest, onSave, onCancel }) => {
       }
       onSave();
     } catch (err) {
+      console.error('Error details:', err.response?.data);  // ← ADD THIS for debugging
       setError('Failed to save guest');
     } finally {
       setLoading(false);
@@ -137,3 +138,4 @@ export const GuestForm = ({ weddingId, guest, onSave, onCancel }) => {
     </form>
   );
 };
+

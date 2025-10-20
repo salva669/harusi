@@ -41,7 +41,7 @@ export const GuestList = ({ weddingId }) => {
     setShowForm(false);
     setEditingGuest(null);
   };
-
+  
   if (loading) return <Loading />;
 
   const rsvpStats = {

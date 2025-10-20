@@ -51,7 +51,7 @@ class GuestViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         wedding_id = self.kwargs.get('wedding_id')
         wedding = get_object_or_404(Wedding, id=wedding_id, user=self.request.user)
-        serializer.save(wedding=wedding)
+        serializer.save(wedding=wedding)  
 
 
 class TaskViewSet(viewsets.ModelViewSet):

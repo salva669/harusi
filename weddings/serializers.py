@@ -14,19 +14,22 @@ class UserSerializer(serializers.ModelSerializer):
 class BudgetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Budget
-        fields = '__all__'
+        fields = ['id', 'category', 'item_name', 'estimated_cost', 'actual_cost', 'notes', 'created_at', 'wedding']
+        read_only_fields = ['id', 'created_at', 'wedding']
 
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = '__all__'
+        fields = ['id', 'title', 'description', 'priority', 'status', 'due_date', 'assigned_to', 'cost', 'created_at', 'updated_at', 'wedding']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'wedding']
 
 
 class GuestSerializer(serializers.ModelSerializer):
     class Meta:
         model = Guest
-        fields = '__all__'
+        fields = ['id', 'name', 'email', 'phone', 'relationship', 'rsvp_status', 'number_of_guests', 'dietary_restrictions', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 
 class WeddingSerializer(serializers.ModelSerializer):
