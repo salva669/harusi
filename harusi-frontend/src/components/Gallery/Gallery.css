@@ -1,0 +1,68 @@
+.photo-gallery {
+    padding: 20px 0;
+  }
+  
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  
+  .gallery-album {
+    border: 1px solid #e5e7eb;
+    transition: transform 0.3s;
+  }
+  
+  .gallery-album:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .gallery-album h3 {
+    color: #1f2937;
+    margin-bottom: 10px;
+  }
+  
+  .album-type {
+    color: #6b7280;
+    font-size: 0.875rem;
+    text-transform: capitalize;
+  }
+  
+  .photo-count {
+    color: #3b82f6;
+    font-weight: 600;
+    margin: 10px 0;
+  }
+  
+  .album-preview {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+    max-height: 200px;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+  
+  .album-preview img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  
+  .upload-btn {
+    display: block;
+    background-color: #3b82f6;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .upload-btn:hover {
+    background-color: #2563eb;
+  }
