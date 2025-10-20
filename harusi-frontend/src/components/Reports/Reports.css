@@ -1,0 +1,27 @@
+.pdf-downloads {
+    background: linear-gradient(135deg, #f5f3ff 0%, #f0f9ff 100%);
+    border: 2px dashed #667eea;
+    margin-bottom: 30px;
+  }
+  
+  .pdf-downloads h3 {
+    color: #667eea;
+    margin-bottom: 10px;
+  }
+  
+  .pdf-downloads p {
+    color: #6b7280;
+    margin-bottom: 20px;
+  }
+  
+  .pdf-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  
+  .pdf-buttons button {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
