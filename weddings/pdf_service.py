@@ -321,3 +321,114 @@ class WeddingPDFGenerator:
         doc.build(elements)
         buffer.seek(0)
         return buffer
+
+class AnalyticsReportPDF:
+    @staticmethod
+    def generate_comprehensive_report(wedding):
+        """Generate comprehensive analytics report PDF"""
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title Page
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=28,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        elements.append(Paragraph("Wedding Analytics Report", title_style))
+        elements.append(Paragraph(f"{wedding.bride_name} & {wedding.groom_name}", styles['Normal']))
+        elements.append(Spacer(1, 0.5*inch))
+        
+        # Get analytics
+        analytics = wedding.analytics
+        
+        # Executive Summary
+        elements.append(Paragraph("Executive Summary", styles['Heading2']))
+        summary = f"""
+        <b>Wedding Date:</b> {wedding.wedding_date.strftime('%B %d, %Y')}<br/>
+        <b>Days Until Wedding:</b> {analytics.days_until_wedding}<br/>
+        <b>Overall Health Score:</b> {analytics.overall_health_score:.1f}/100<br/>
+        <b>Budget Status:</b> {('Under Budget' if analytics.budget_variance < 0 else 'Over Budget')} by TZS {abs(analytics.budget_variance):,.0f}<br/>
+        <b>Guest Response Rate:</b> {(analytics.total_confirmed + analytics.total_declined) / analytics.total_invitations_sent * 100:.1f}%<br/>
+        <b>Task Completion:</b> {analytics.completion_percentage:.1f}%
+        """
+        elements.append(Paragraph(summary, styles['Normal']))
+        elements.append(Spacer(1, 0.3*inch))
+        elements.append(PageBreak())
+        
+        # Budget Analysis
+        elements.append(Paragraph("Budget Analysis", styles['Heading2']))
+        budget_data = [
+            ['Category', 'Estimated', 'Actual', 'Variance'],
+        ]
+        
+        for cat, data in analytics.budget_category_breakdown.items():
+            budget_data.append([
+                cat.replace('_', ' ').title(),
+                f"TZS {data['estimated']:,.0f}",
+                f"TZS {data['actual']:,.0f}",
+                f"TZS {data['estimated'] - data['actual']:,.0f}"
+            ])
+        
+        budget_table = Table(budget_data)
+        budget_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(budget_table)
+        elements.append(Spacer(1, 0.3*inch))
+        elements.append(PageBreak())
+        
+        # Guest Analytics
+        elements.append(Paragraph("Guest Analytics", styles['Heading2']))
+        guest_data = f"""
+        <b>Total Invitations:</b> {analytics.total_invitations_sent}<br/>
+        <b>Confirmed:</b> {analytics.total_confirmed}<br/>
+        <b>Pending:</b> {analytics.total_pending}<br/>
+        <b>Declined:</b> {analytics.total_declined}<br/>
+        <b>Average Guests per Invitation:</b> {analytics.average_guests_per_invitation:.1f}
+        """
+        elements.append(Paragraph(guest_data, styles['Normal']))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Task Analytics
+        elements.append(Paragraph("Task Analytics", styles['Heading2']))
+        task_data = f"""
+        <b>Total Tasks:</b> {analytics.total_tasks}<br/>
+        <b>Completed:</b> {analytics.completed_tasks}<br/>
+        <b>Pending:</b> {analytics.pending_tasks}<br/>
+        <b>Overdue:</b> {analytics.overdue_tasks}<br/>
+        <b>Completion Percentage:</b> {analytics.completion_percentage:.1f}%
+        """
+        elements.append(Paragraph(task_data, styles['Normal']))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Health Scores
+        elements.append(PageBreak())
+        elements.append(Paragraph("Health Scores", styles['Heading2']))
+        health_data = f"""
+        <b>Budget Health:</b> {analytics.budget_health_score:.1f}/100<br/>
+        <b>Task Health:</b> {analytics.task_health_score:.1f}/100<br/>
+        <b>Guest Health:</b> {analytics.guest_health_score:.1f}/100<br/>
+        <b>Planning Health:</b> {analytics.planning_health_score:.1f}/100<br/>
+        <b>Overall Health:</b> {analytics.overall_health_score:.1f}/100
+        """
+        elements.append(Paragraph(health_data, styles['Normal']))
+        
+        # Footer
+        elements.append(Spacer(1, 0.5*inch))
+        footer = f"Report Generated: {datetime.now().strftime('%B %d, %Y %I:%M %p')}"
+        elements.append(Paragraph(footer, ParagraphStyle('Footer', parent=styles['Normal'], alignment=TA_CENTER, fontSize=9, textColor=colors.grey)))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer

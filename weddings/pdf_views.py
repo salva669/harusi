@@ -67,3 +67,16 @@ def download_invitation_pdf(request, wedding_id):
         filename=f'invitation_{wedding.id}.pdf',
         content_type='application/pdf'
     )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_analytics_report_pdf(request, wedding_id):
+    from .pdf_service import AnalyticsReportPDF
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    buffer = AnalyticsReportPDF.generate_comprehensive_report(wedding)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'analytics_report_{wedding.id}.pdf',
+        content_type='application/pdf'
+    )

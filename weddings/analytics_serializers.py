@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .analytics_models import (
+from .models import (
     WeddingAnalytics, WeeklyAnalyticsSnapshot, GuestEngagementMetrics
 )
 

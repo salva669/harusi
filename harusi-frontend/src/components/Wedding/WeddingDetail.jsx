@@ -125,6 +125,12 @@ export const WeddingDetail = () => {
         >
           Reports
         </button>
+        <button 
+          className={`tab-button ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          Analytics
+        </button>
       </div>
 
       <div className={`tab-content ${activeTab === 'overview' ? 'active' : ''}`}>
@@ -167,6 +173,10 @@ export const WeddingDetail = () => {
 
       <div className={`tab-content ${activeTab === 'reports' ? 'active' : ''}`}>
         <PDFDownloads weddingId={id} />
+      </div>
+
+      <div className={`tab-content ${activeTab === 'analytics' ? 'active' : ''}`}>
+        <AnalyticsDashboard weddingId={id} />
       </div>
     </div>
   );
