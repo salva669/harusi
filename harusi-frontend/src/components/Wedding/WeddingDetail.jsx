@@ -96,6 +96,30 @@ export const WeddingDetail = () => {
         >
           Budget
         </button>
+        <button 
+          className={`tab-button ${activeTab === 'gallery' ? 'active' : ''}`}
+          onClick={() => setActiveTab('gallery')}
+        >
+          Gallery
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'timeline' ? 'active' : ''}`}
+          onClick={() => setActiveTab('timeline')}
+        >
+          Timeline
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'vendors' ? 'active' : ''}`}
+          onClick={() => setActiveTab('vendors')}
+        >
+          Vendors
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'reports' ? 'active' : ''}`}
+          onClick={() => setActiveTab('reports')}
+        >
+          Reports
+        </button>
       </div>
 
       <div className={`tab-content ${activeTab === 'overview' ? 'active' : ''}`}>
@@ -122,6 +146,22 @@ export const WeddingDetail = () => {
 
       <div className={`tab-content ${activeTab === 'budget' ? 'active' : ''}`}>
         <BudgetSummary weddingId={id} />
+      </div>
+
+      <div className={`tab-content ${activeTab === 'gallery' ? 'active' : ''}`}>
+        <PhotoGallery weddingId={id} />
+      </div>
+
+      <div className={`tab-content ${activeTab === 'timeline' ? 'active' : ''}`}>
+        <Timeline weddingId={id} />
+      </div>
+
+      <div className={`tab-content ${activeTab === 'vendors' ? 'active' : ''}`}>
+        <VendorList weddingId={id} />
+      </div>
+
+      <div className={`tab-content ${activeTab === 'reports' ? 'active' : ''}`}>
+        <PDFDownloads weddingId={id} />
       </div>
     </div>
   );
