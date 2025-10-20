@@ -112,3 +112,144 @@ class Budget(models.Model):
     
     def __str__(self):
         return f"{self.category} - {self.item_name}"
+
+class PhotoGallery(models.Model):
+    ALBUM_TYPES = [
+        ('pre_wedding', 'Pre-Wedding'),
+        ('ceremony', 'Ceremony'),
+        ('reception', 'Reception'),
+        ('other', 'Other'),
+    ]
+    
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='photo_albums')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    album_type = models.CharField(max_length=50, choices=ALBUM_TYPES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.title} - {self.wedding}"
+
+
+class Photo(models.Model):
+    album = models.ForeignKey(PhotoGallery, on_delete=models.CASCADE, related_name='photos')
+    image = models.ImageField(upload_to='wedding_photos/%Y/%m/%d/')
+    caption = models.CharField(max_length=255, blank=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+    
+    def __str__(self):
+        return f"Photo in {self.album.title}"
+
+
+class Timeline(models.Model):
+    EVENT_TYPES = [
+        ('save_date', 'Save the Date'),
+        ('invitation', 'Send Invitations'),
+        ('rsvp_deadline', 'RSVP Deadline'),
+        ('final_headcount', 'Final Headcount'),
+        ('ceremony_rehearsal', 'Ceremony Rehearsal'),
+        ('wedding_day', 'Wedding Day'),
+        ('honeymoon', 'Honeymoon'),
+        ('thank_you', 'Send Thank You Cards'),
+        ('other', 'Other'),
+    ]
+    
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='timeline_events')
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    date = models.DateField()
+    time = models.TimeField(null=True, blank=True)
+    location = models.CharField(max_length=255, blank=True)
+    is_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['date']
+    
+    def __str__(self):
+        return f"{self.title} - {self.date}"
+
+
+class Vendor(models.Model):
+    VENDOR_TYPES = [
+        ('venue', 'Venue'),
+        ('catering', 'Catering'),
+        ('photography', 'Photography'),
+        ('videography', 'Videography'),
+        ('flowers', 'Flowers & Decoration'),
+        ('music', 'Music & DJ'),
+        ('transportation', 'Transportation'),
+        ('accommodation', 'Accommodation'),
+        ('invitation', 'Invitation & Stationery'),
+        ('makeup', 'Makeup & Hair'),
+        ('wedding_planner', 'Wedding Planner'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('inquiry', 'Inquiry'),
+        ('negotiating', 'Negotiating'),
+        ('booked', 'Booked'),
+        ('completed', 'Completed'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='vendors')
+    vendor_type = models.CharField(max_length=50, choices=VENDOR_TYPES)
+    business_name = models.CharField(max_length=200)
+    contact_person = models.CharField(max_length=100)
+    phone = models.CharField(max_length=20)
+    email = models.EmailField()
+    website = models.URLField(blank=True)
+    quote = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    deposit_paid = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    final_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inquiry')
+    notes = models.TextField(blank=True)
+    contract_file = models.FileField(upload_to='vendor_contracts/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['vendor_type', 'status']
+    
+    def __str__(self):
+        return f"{self.business_name} ({self.vendor_type})"
+
+
+class VendorNote(models.Model):
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='notes')
+    content = models.TextField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+
+
+class InvitationTemplate(models.Model):
+    wedding = models.OneToOneField(Wedding, on_delete=models.CASCADE, related_name='invitation_template')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    ceremony_time = models.TimeField(null=True, blank=True)
+    ceremony_location = models.CharField(max_length=255, blank=True)
+    reception_time = models.TimeField(null=True, blank=True)
+    reception_location = models.CharField(max_length=255, blank=True)
+    dress_code = models.CharField(max_length=100, blank=True)
+    rsvp_deadline = models.DateField(null=True, blank=True)
+    rsvp_email = models.EmailField()
+    custom_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Invitation - {self.wedding}"
