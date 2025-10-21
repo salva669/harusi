@@ -73,7 +73,7 @@ export const budgetAPI = {
     api.delete(`/weddings/${weddingId}/budget/${budgetId}/`),
 };
 
-// Gallery endpoints ← ADD THIS
+// Gallery endpoints 
 export const galleryAPI = {
   getAll: (weddingId) => api.get(`/weddings/${weddingId}/galleries/`),
   create: (weddingId, data) => api.post(`/weddings/${weddingId}/galleries/`, data),
@@ -83,7 +83,7 @@ export const galleryAPI = {
     api.delete(`/weddings/${weddingId}/galleries/${galleryId}/`),
 };
 
-// Photo endpoints ← ADD THIS
+// Photo endpoints 
 export const photoAPI = {
   getAll: (weddingId, albumId) => api.get(`/weddings/${weddingId}/galleries/${albumId}/photos/`),
   create: (weddingId, albumId, data) => api.post(`/weddings/${weddingId}/galleries/${albumId}/photos/`, data),
@@ -93,7 +93,7 @@ export const photoAPI = {
     api.delete(`/weddings/${weddingId}/galleries/${albumId}/photos/${photoId}/`),
 };
 
-// Timeline endpoints ← ADD THIS
+// Timeline endpoints 
 export const timelineAPI = {
   getAll: (weddingId) => api.get(`/weddings/${weddingId}/timeline/`),
   create: (weddingId, data) => api.post(`/weddings/${weddingId}/timeline/`, data),
@@ -105,7 +105,7 @@ export const timelineAPI = {
     api.post(`/weddings/${weddingId}/timeline/${eventId}/toggle_completed/`),
 };
 
-// Vendor endpoints ← ADD THIS
+// Vendor endpoints 
 export const vendorAPI = {
   getAll: (weddingId) => api.get(`/weddings/${weddingId}/vendors/`),
   create: (weddingId, data) => api.post(`/weddings/${weddingId}/vendors/`, data),
@@ -117,7 +117,7 @@ export const vendorAPI = {
     api.post(`/weddings/${weddingId}/vendors/${vendorId}/add_note/`, data),
 };
 
-// Analytics endpoints ← ADD THIS
+// Analytics endpoints 
 export const analyticsAPI = {
   getAnalytics: (weddingId) => api.get(`/weddings/${weddingId}/analytics/`),
   getTrends: (weddingId) => api.get(`/weddings/${weddingId}/analytics/trends/`),
@@ -125,6 +125,26 @@ export const analyticsAPI = {
   getCategoryBreakdown: (weddingId) => api.get(`/weddings/${weddingId}/analytics/budget-breakdown/`),
   getTimelineStatus: (weddingId) => api.get(`/weddings/${weddingId}/analytics/timeline-status/`),
   getGuestAnalytics: (weddingId) => api.get(`/weddings/${weddingId}/analytics/guest-analytics/`),
+};
+
+// Pledge endpoints
+export const pledgeAPI = {
+  getAll: (weddingId) => api.get(`/weddings/${weddingId}/pledges/`),
+  getOne: (weddingId, pledgeId) => api.get(`/weddings/${weddingId}/pledges/${pledgeId}/`),
+  create: (weddingId, data) => api.post(`/weddings/${weddingId}/pledges/`, data),
+  update: (weddingId, pledgeId, data) => api.put(`/weddings/${weddingId}/pledges/${pledgeId}/`, data),
+  delete: (weddingId, pledgeId) => api.delete(`/weddings/${weddingId}/pledges/${pledgeId}/`),
+  getSummary: (weddingId) => api.get(`/weddings/${weddingId}/pledges/summary/`),
+  recordPayment: (weddingId, pledgeId, data) => 
+    api.post(`/weddings/${weddingId}/pledges/${pledgeId}/record_payment/`, data),
+};
+
+// Payment endpoints
+export const pledgePaymentAPI = {
+  getAll: (weddingId, pledgeId) => api.get(`/weddings/${weddingId}/pledges/${pledgeId}/payments/`),
+  create: (weddingId, pledgeId, data) => api.post(`/weddings/${weddingId}/pledges/${pledgeId}/payments/`, data),
+  delete: (weddingId, pledgeId, paymentId) => 
+    api.delete(`/weddings/${weddingId}/pledges/${pledgeId}/payments/${paymentId}/`),
 };
 
 export default api;
