@@ -26,6 +26,7 @@ from .analytics_views import (
     get_guest_analytics,
     get_health_scores
 )
+from .pledge_views import GuestPledgeViewSet, PledgePaymentViewSet
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -102,4 +103,15 @@ urlpatterns = [
     path('weddings/<int:wedding_id>/analytics/timeline-status/', get_timeline_status, name='timeline-status'),
     path('weddings/<int:wedding_id>/analytics/guest-analytics/', get_guest_analytics, name='guest-analytics'),
     path('weddings/<int:wedding_id>/analytics/health-scores/', get_health_scores, name='health-scores'),
+
+    # Pledge tracking
+    path('weddings/<int:wedding_id>/pledges/', GuestPledgeViewSet.as_view({'get': 'list', 'post': 'create'}), name='pledge-list'),
+    path('weddings/<int:wedding_id>/pledges/<int:pk>/', GuestPledgeViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='pledge-detail'),
+    path('weddings/<int:wedding_id>/pledges/summary/', GuestPledgeViewSet.as_view({'get': 'summary'}), name='pledge-summary'),
+    path('weddings/<int:wedding_id>/pledges/<int:pk>/record_payment/', GuestPledgeViewSet.as_view({'post': 'record_payment'}), name='pledge-record-payment'),
+    
+    # Payments
+    path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/', PledgePaymentViewSet.as_view({'get': 'list', 'post': 'create'}), name='payment-list'),
+    path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/<int:pk>/', PledgePaymentViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='payment-detail'),
+
 ]

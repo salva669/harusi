@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
     Wedding, Guest, Task, Budget, PhotoGallery, Photo,
-    Timeline, Vendor, VendorNote, InvitationTemplate
+    Timeline, Vendor, VendorNote, InvitationTemplate, GuestPledge, PledgePayment
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -98,3 +98,31 @@ class InvitationTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = InvitationTemplate
         fields = '__all__'
+
+class PledgePaymentSerializer(serializers.ModelSerializer):
+    recorded_by_username = serializers.CharField(source='recorded_by.username', read_only=True)
+    
+    class Meta:
+        model = PledgePayment
+        fields = ['id', 'pledge', 'amount', 'payment_date', 'payment_method', 
+                  'reference_number', 'notes', 'recorded_by', 'recorded_by_username', 'created_at']
+        read_only_fields = ['id', 'created_at', 'recorded_by']
+
+
+class GuestPledgeSerializer(serializers.ModelSerializer):
+    guest_name = serializers.CharField(source='guest.name', read_only=True)
+    payments = PledgePaymentSerializer(many=True, read_only=True)
+    payment_progress = serializers.SerializerMethodField()
+    
+    def get_payment_progress(self, obj):
+        if obj.pledged_amount > 0:
+            return (obj.paid_amount / obj.pledged_amount * 100)
+        return 0
+    
+    class Meta:
+        model = GuestPledge
+        fields = ['id', 'guest', 'guest_name', 'wedding', 'pledged_amount', 'paid_amount', 
+                  'balance', 'payment_status', 'payment_method',
+                  'pledge_date', 'payment_deadline', 'notes', 'payments', 'payment_progress',
+                  'created_at', 'updated_at']
+        read_only_fields = ['id', 'balance', 'payment_status', 'created_at', 'updated_at', 'wedding']

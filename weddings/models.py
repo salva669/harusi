@@ -344,3 +344,82 @@ class GuestEngagementMetrics(models.Model):
     
     def __str__(self):
         return f"Engagement - {self.wedding}"
+
+class GuestPledge(models.Model):
+    """Track guest financial contributions/pledges"""
+    PAYMENT_STATUS_CHOICES = [
+        ('pledged', 'Pledged'),
+        ('partial', 'Partially Paid'),
+        ('paid', 'Fully Paid'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    PAYMENT_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('mobile_money', 'Mobile Money (M-Pesa/TigoPesa/AirtelMoney)'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('cheque', 'Cheque'),
+        ('other', 'Other'),
+    ]
+        
+    guest = models.ForeignKey(Guest, on_delete=models.CASCADE, related_name='pledges')
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='pledges')
+    
+    # Pledge Information
+    pledged_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    # Payment Details
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pledged')
+    payment_method = models.CharField(max_length=50, choices=PAYMENT_METHOD_CHOICES, blank=True)
+    
+    # Additional Information
+    pledge_date = models.DateField(auto_now_add=True)
+    payment_deadline = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    
+    # Tracking
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_pledges')
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate balance
+        self.balance = self.pledged_amount - self.paid_amount
+        
+        # Auto-update payment status
+        if self.paid_amount == 0:
+            self.payment_status = 'pledged'
+        elif self.paid_amount >= self.pledged_amount:
+            self.payment_status = 'paid'
+        elif self.paid_amount > 0:
+            self.payment_status = 'partial'
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.guest.name} - TZS {self.pledged_amount}"
+
+
+class PledgePayment(models.Model):
+    """Track individual payments towards pledges"""
+    pledge = models.ForeignKey(GuestPledge, on_delete=models.CASCADE, related_name='payments')
+    
+    amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    payment_date = models.DateField()
+    payment_method = models.CharField(max_length=50, choices=GuestPledge.PAYMENT_METHOD_CHOICES)
+    reference_number = models.CharField(max_length=100, blank=True, help_text="Transaction ID, Receipt No, etc")
+    notes = models.TextField(blank=True)
+    
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-payment_date']
+    
+    def __str__(self):
+        return f"Payment: TZS {self.amount} - {self.payment_date}"
