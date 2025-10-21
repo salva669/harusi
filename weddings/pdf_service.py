@@ -432,3 +432,74 @@ class AnalyticsReportPDF:
         doc.build(elements)
         buffer.seek(0)
         return buffer
+
+@staticmethod
+def generate_pledge_report_pdf(wedding):
+    """Generate pledge/contribution report PDF"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#667eea'),
+        spaceAfter=30,
+        alignment=TA_CENTER
+    )
+    
+    title = Paragraph(
+        f"{wedding.bride_name} & {wedding.groom_name}<br/>Pledge & Contribution Report",
+        title_style
+    )
+    elements.append(title)
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Summary
+    from .models import GuestPledge
+    pledges = GuestPledge.objects.filter(wedding=wedding)
+    
+    total_pledged = sum([float(p.pledged_amount) for p in pledges])
+    total_paid = sum([float(p.paid_amount) for p in pledges])
+    total_balance = total_pledged - total_paid
+    
+    summary = f"""
+    <b>Total Pledged:</b> TZS {total_pledged:,.0f}<br/>
+    <b>Total Collected:</b> TZS {total_paid:,.0f}<br/>
+    <b>Outstanding Balance:</b> TZS {total_balance:,.0f}<br/>
+    <b>Collection Rate:</b> {(total_paid/total_pledged*100 if total_pledged > 0 else 0):.1f}%
+    """
+    elements.append(Paragraph(summary, styles['Normal']))
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Pledge table
+    data = [['Guest Name', 'Pledged', 'Paid', 'Balance', 'Status']]
+    
+    for pledge in pledges:
+        data.append([
+            pledge.guest.name,
+            f"TZS {pledge.pledged_amount:,.0f}",
+            f"TZS {pledge.paid_amount:,.0f}",
+            f"TZS {pledge.balance:,.0f}",
+            pledge.get_payment_status_display()
+        ])
+    
+    table = Table(data, colWidths=[2*inch, 1.2*inch, 1.2*inch, 1.2*inch, 1*inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+    ]))
+    
+    elements.append(table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer

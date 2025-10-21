@@ -80,3 +80,16 @@ def download_analytics_report_pdf(request, wedding_id):
         filename=f'analytics_report_{wedding.id}.pdf',
         content_type='application/pdf'
     )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_pledge_report_pdf(request, wedding_id):
+    from .pdf_service import WeddingPDFGenerator
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    buffer = WeddingPDFGenerator.generate_pledge_report_pdf(wedding)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'pledge_report_{wedding.id}.pdf',
+        content_type='application/pdf'
+    )
