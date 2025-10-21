@@ -3,6 +3,7 @@ import { pledgeAPI } from '../../services/api';
 import { PledgeForm } from './PledgeForm';
 import { PledgeSummary } from './PledgeSummary';
 import { Loading } from '../Common/Loading';
+import { PaymentModal } from './PaymentModal';
 import './Pledges.css';
 
 export const PledgeManagement = ({ weddingId }) => {
@@ -11,6 +12,8 @@ export const PledgeManagement = ({ weddingId }) => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPledge, setEditingPledge] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPledge, setSelectedPledge] = useState(null);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
@@ -155,14 +158,14 @@ export const PledgeManagement = ({ weddingId }) => {
               {pledge.notes && <p className="pledge-notes">{pledge.notes}</p>}
 
               <div className="pledge-actions">
-                <button 
-                  className="primary" 
-                  onClick={() => {
-                    // Open payment recording modal
-                    // We'll create this next
-                  }}
+              <button 
+                className="primary" 
+                onClick={() => {
+                    setSelectedPledge(pledge);
+                    setShowPaymentModal(true);
+                }}
                 >
-                  Record Payment
+                Record Payment
                 </button>
                 <button 
                   className="secondary" 
@@ -181,6 +184,22 @@ export const PledgeManagement = ({ weddingId }) => {
           ))}
         </div>
       )}
+      {showPaymentModal && selectedPledge && (
+        <PaymentModal 
+            pledge={selectedPledge}
+            weddingId={weddingId}
+            onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedPledge(null);
+            }}
+            onSuccess={() => {
+            loadData();
+            setShowPaymentModal(false);
+            setSelectedPledge(null);
+            }}
+        />
+        )}
+
     </div>
   );
 };

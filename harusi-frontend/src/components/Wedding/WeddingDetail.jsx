@@ -10,6 +10,7 @@ import { Timeline } from '../Timeline/Timeline';
 import { VendorList } from '../Vendors/VendorList';
 import { PDFDownloads } from '../Reports/PDFDownloads';  
 import { AnalyticsDashboard } from '../Analytics/AnalyticsDashboard';
+import { PledgeManagement } from '../Pledges/PledgeManagement';
 import './Wedding.css';
 
 export const WeddingDetail = () => {
@@ -90,6 +91,12 @@ export const WeddingDetail = () => {
           Guests
         </button>
         <button 
+          className={`tab-button ${activeTab === 'pledges' ? 'active' : ''}`}
+          onClick={() => setActiveTab('pledges')}
+        >
+          Pledges
+        </button>
+        <button 
           className={`tab-button ${activeTab === 'tasks' ? 'active' : ''}`}
           onClick={() => setActiveTab('tasks')}
         >
@@ -149,6 +156,10 @@ export const WeddingDetail = () => {
 
       <div className={`tab-content ${activeTab === 'guests' ? 'active' : ''}`}>
         <GuestList weddingId={id} />
+      </div>
+
+      <div className={`tab-content ${activeTab === 'pledges' ? 'active' : ''}`}>
+        <PledgeManagement weddingId={id} />
       </div>
 
       <div className={`tab-content ${activeTab === 'tasks' ? 'active' : ''}`}>
