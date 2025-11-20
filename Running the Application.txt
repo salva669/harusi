@@ -1,0 +1,16 @@
+## Running the Complete Application
+
+### Terminal 1 - Backend:
+```bash
+cd harusi_backend
+source venv/bin/activate
+python manage.py runserver
+```
+
+### Terminal 2 - Frontend:
+```bash
+cd harusi-frontend
+npm start
+```
+
+Visit `http://localhost:3000` in your browser!
