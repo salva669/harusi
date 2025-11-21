@@ -82,11 +82,11 @@ class ApiService {
   }
 
   Future<Response>updateGuest(int weddingId, int guestId, Map<String, dynamic> data) {
-    return _dio.put('/weddings/$weddingId/guests/$guestId', data: data);
+    return _dio.put('/weddings/$weddingId/guests/$guestId/', data: data);
   }
 
   Future<Response>deleteGuest(int weddingId, int guestId) {
-    return _dio.delete('/weddings/$weddingId/guests/$guestId');
+    return _dio.delete('/weddings/$weddingId/guests/$guestId/');
   }
 
   //Pledges
