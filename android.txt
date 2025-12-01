@@ -1,0 +1,1054 @@
+# Harusi Flutter Android App - Complete Step-by-Step Guide
+## Building with Flutter in VS Code
+
+---
+
+## Phase 1: Setup Flutter Environment
+
+### 1.1 Install Flutter SDK
+
+**Download Flutter:**
+1. Go to: https://docs.flutter.dev/get-started/install/windows
+2. Download Flutter SDK ZIP
+3. Extract to: `C:\src\flutter` (or your preferred location)
+
+**Add to PATH:**
+```bash
+# Add to System Environment Variables PATH:
+C:\src\flutter\bin
+```
+
+**Verify Installation:**
+```bash
+flutter --version
+flutter doctor
+```
+
+### 1.2 Install Android Studio (if not already)
+
+1. Download: https://developer.android.com/studio
+2. Install Android SDK
+3. Install Android Virtual Device (AVD)
+
+**Run Flutter Doctor:**
+```bash
+flutter doctor
+```
+
+Fix any issues shown (Android licenses, etc):
+```bash
+flutter doctor --android-licenses
+```
+
+### 1.3 Setup VS Code for Flutter
+
+**Install VS Code Extensions:**
+1. Flutter (by Dart Code)
+2. Dart (by Dart Code)
+3. Flutter Widget Snippets
+4. Awesome Flutter Snippets
+5. Bracket Pair Colorizer
+
+**Verify Setup:**
+```bash
+flutter doctor -v
+```
+
+---
+
+## Phase 2: Create Flutter Project
+
+### 2.1 Create Project
+
+```bash
+cd D:\Django\harusi-management
+flutter create harusi_mobile
+cd harusi_mobile
+```
+
+### 2.2 Update pubspec.yaml
+
+Replace `pubspec.yaml` content:
+
+```yaml
+name: harusi_mobile
+description: Harusi Wedding Management Mobile App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # UI & Icons
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # HTTP & API
+  http: ^1.1.2
+  dio: ^5.4.0
+  
+  # Storage
+  shared_preferences: ^2.2.2
+  
+  # Navigation
+  go_router: ^13.0.0
+  
+  # Forms & Validation
+  flutter_form_builder: ^9.1.1
+  form_builder_validators: ^9.1.0
+  
+  # Date & Time
+  intl: ^0.19.0
+  
+  # Loading & Dialogs
+  flutter_spinkit: ^5.2.0
+  awesome_dialog: ^3.1.0
+  
+  # Charts (for analytics)
+  fl_chart: ^0.66.0
+  
+  # Pull to refresh
+  pull_to_refresh: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  
+  # Add assets if needed
+  # assets:
+  #   - images/
+```
+
+**Install dependencies:**
+```bash
+flutter pub get
+```
+
+---
+
+## Phase 3: Project Structure
+
+Create this folder structure in `lib/`:
+
+```
+lib/
+├── main.dart
+├── config/
+│   ├── app_config.dart
+│   └── theme.dart
+├── models/
+│   ├── wedding.dart
+│   ├── guest.dart
+│   ├── task.dart
+│   ├── budget.dart
+│   └── pledge.dart
+├── services/
+│   ├── api_service.dart
+│   ├── auth_service.dart
+│   └── storage_service.dart
+├── providers/
+│   ├── auth_provider.dart
+│   ├── wedding_provider.dart
+│   ├── guest_provider.dart
+│   ├── task_provider.dart
+│   ├── budget_provider.dart
+│   └── pledge_provider.dart
+├── screens/
+│   ├── auth/
+│   │   ├── login_screen.dart
+│   │   └── register_screen.dart
+│   ├── wedding/
+│   │   ├── wedding_list_screen.dart
+│   │   ├── wedding_detail_screen.dart
+│   │   └── wedding_form_screen.dart
+│   ├── guest/
+│   │   ├── guest_list_screen.dart
+│   │   └── guest_form_screen.dart
+│   ├── task/
+│   │   ├── task_list_screen.dart
+│   │   └── task_form_screen.dart
+│   ├── budget/
+│   │   └── budget_screen.dart
+│   └── pledge/
+│       ├── pledge_list_screen.dart
+│       └── pledge_form_screen.dart
+├── widgets/
+│   ├── custom_button.dart
+│   ├── custom_text_field.dart
+│   ├── loading_widget.dart
+│   └── wedding_card.dart
+└── utils/
+    ├── constants.dart
+    └── helpers.dart
+```
+
+---
+
+## Phase 4: Configuration Files
+
+### 4.1 App Config
+
+Create `lib/config/app_config.dart`:
+
+```dart
+class AppConfig {
+  // API Configuration
+  // For Android Emulator, use 10.0.2.2 instead of localhost
+  static const String baseUrl = 'http://10.0.2.2:8000/api';
+  
+  // App Information
+  static const String appName = 'Harusi';
+  static const String appVersion = '1.0.0';
+  
+  // Storage Keys
+  static const String tokenKey = 'auth_token';
+  static const String userKey = 'user_data';
+  
+  // Timeouts
+  static const Duration connectionTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(seconds: 30);
+}
+```
+
+### 4.2 Theme
+
+Create `lib/config/theme.dart`:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class AppTheme {
+  // Colors
+  static const Color primary = Color(0xFF667eea);
+  static const Color secondary = Color(0xFF764ba2);
+  static const Color success = Color(0xFF10b981);
+  static const Color danger = Color(0xFFef4444);
+  static const Color warning = Color(0xFFf59e0b);
+  static const Color info = Color(0xFF3b82f6);
+  static const Color light = Color(0xFFf9fafb);
+  static const Color dark = Color(0xFF1f2937);
+  
+  static ThemeData get lightTheme {
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primary,
+        primary: primary,
+        secondary: secondary,
+        error: danger,
+      ),
+      textTheme: GoogleFonts.interTextTheme(),
+      scaffoldBackgroundColor: light,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: dark,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      cardTheme: CardTheme(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## Phase 5: Models
+
+### 5.1 Wedding Model
+
+Create `lib/models/wedding.dart`:
+
+```dart
+class Wedding {
+  final int id;
+  final String brideName;
+  final String groomName;
+  final DateTime weddingDate;
+  final String venue;
+  final double budget;
+  final String status;
+  final String? description;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  Wedding({
+    required this.id,
+    required this.brideName,
+    required this.groomName,
+    required this.weddingDate,
+    required this.venue,
+    required this.budget,
+    required this.status,
+    this.description,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory Wedding.fromJson(Map<String, dynamic> json) {
+    return Wedding(
+      id: json['id'],
+      brideName: json['bride_name'],
+      groomName: json['groom_name'],
+      weddingDate: DateTime.parse(json['wedding_date']),
+      venue: json['venue'],
+      budget: double.parse(json['budget'].toString()),
+      status: json['status'],
+      description: json['description'],
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'bride_name': brideName,
+      'groom_name': groomName,
+      'wedding_date': weddingDate.toIso8601String().split('T')[0],
+      'venue': venue,
+      'budget': budget,
+      'status': status,
+      'description': description,
+    };
+  }
+
+  String get coupleNames => '$brideName & $groomName';
+  
+  int get daysUntil {
+    final now = DateTime.now();
+    return weddingDate.difference(now).inDays;
+  }
+}
+```
+
+### 5.2 Guest Model
+
+Create `lib/models/guest.dart`:
+
+```dart
+class Guest {
+  final int id;
+  final String name;
+  final String? email;
+  final String? phone;
+  final String relationship;
+  final String rsvpStatus;
+  final int numberOfGuests;
+  final String? dietaryRestrictions;
+  final DateTime createdAt;
+
+  Guest({
+    required this.id,
+    required this.name,
+    this.email,
+    this.phone,
+    required this.relationship,
+    required this.rsvpStatus,
+    required this.numberOfGuests,
+    this.dietaryRestrictions,
+    required this.createdAt,
+  });
+
+  factory Guest.fromJson(Map<String, dynamic> json) {
+    return Guest(
+      id: json['id'],
+      name: json['name'],
+      email: json['email'],
+      phone: json['phone'],
+      relationship: json['relationship'],
+      rsvpStatus: json['rsvp_status'],
+      numberOfGuests: json['number_of_guests'],
+      dietaryRestrictions: json['dietary_restrictions'],
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'relationship': relationship,
+      'rsvp_status': rsvpStatus,
+      'number_of_guests': numberOfGuests,
+      'dietary_restrictions': dietaryRestrictions,
+    };
+  }
+}
+```
+
+### 5.3 Pledge Model
+
+Create `lib/models/pledge.dart`:
+
+```dart
+class Pledge {
+  final int id;
+  final int guestId;
+  final String guestName;
+  final double pledgedAmount;
+  final double paidAmount;
+  final double balance;
+  final String paymentStatus;
+  final String? paymentMethod;
+  final DateTime? paymentDeadline;
+  final String? notes;
+  final DateTime createdAt;
+
+  Pledge({
+    required this.id,
+    required this.guestId,
+    required this.guestName,
+    required this.pledgedAmount,
+    required this.paidAmount,
+    required this.balance,
+    required this.paymentStatus,
+    this.paymentMethod,
+    this.paymentDeadline,
+    this.notes,
+    required this.createdAt,
+  });
+
+  factory Pledge.fromJson(Map<String, dynamic> json) {
+    return Pledge(
+      id: json['id'],
+      guestId: json['guest'],
+      guestName: json['guest_name'] ?? '',
+      pledgedAmount: double.parse(json['pledged_amount'].toString()),
+      paidAmount: double.parse(json['paid_amount'].toString()),
+      balance: double.parse(json['balance'].toString()),
+      paymentStatus: json['payment_status'],
+      paymentMethod: json['payment_method'],
+      paymentDeadline: json['payment_deadline'] != null 
+          ? DateTime.parse(json['payment_deadline']) 
+          : null,
+      notes: json['notes'],
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'guest': guestId,
+      'pledged_amount': pledgedAmount,
+      'paid_amount': paidAmount,
+      'payment_method': paymentMethod,
+      'payment_deadline': paymentDeadline?.toIso8601String().split('T')[0],
+      'notes': notes,
+    };
+  }
+
+  double get paymentProgress {
+    if (pledgedAmount == 0) return 0;
+    return (paidAmount / pledgedAmount) * 100;
+  }
+}
+```
+
+---
+
+## Phase 6: Services
+
+### 6.1 Storage Service
+
+Create `lib/services/storage_service.dart`:
+
+```dart
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+class StorageService {
+  static Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_token', token);
+  }
+
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_token');
+  }
+
+  static Future<void> saveUser(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_data', jsonEncode(user));
+  }
+
+  static Future<Map<String, dynamic>?> getUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userData = prefs.getString('user_data');
+    if (userData != null) {
+      return jsonDecode(userData);
+    }
+    return null;
+  }
+
+  static Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+}
+```
+
+### 6.2 API Service
+
+Create `lib/services/api_service.dart`:
+
+```dart
+import 'package:dio/dio.dart';
+import '../config/app_config.dart';
+import 'storage_service.dart';
+
+class ApiService {
+  late Dio _dio;
+
+  ApiService() {
+    _dio = Dio(BaseOptions(
+      baseUrl: AppConfig.baseUrl,
+      connectTimeout: AppConfig.connectionTimeout,
+      receiveTimeout: AppConfig.receiveTimeout,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    ));
+
+    // Add interceptor for token
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await StorageService.getToken();
+        if (token != null) {
+          options.headers['Authorization'] = 'Token $token';
+        }
+        return handler.next(options);
+      },
+      onError: (error, handler) {
+        print('API Error: ${error.message}');
+        return handler.next(error);
+      },
+    ));
+  }
+
+  // Auth
+  Future<Response> login(String username, String password) {
+    return _dio.post('/auth-token/', data: {
+      'username': username,
+      'password': password,
+    });
+  }
+
+  Future<Response> register(String username, String email, String password) {
+    return _dio.post('/register/', data: {
+      'username': username,
+      'email': email,
+      'password': password,
+    });
+  }
+
+  Future<Response> getUser() {
+    return _dio.get('/user/');
+  }
+
+  // Weddings
+  Future<Response> getWeddings() {
+    return _dio.get('/weddings/');
+  }
+
+  Future<Response> getWedding(int id) {
+    return _dio.get('/weddings/$id/');
+  }
+
+  Future<Response> createWedding(Map<String, dynamic> data) {
+    return _dio.post('/weddings/', data: data);
+  }
+
+  Future<Response> updateWedding(int id, Map<String, dynamic> data) {
+    return _dio.put('/weddings/$id/', data: data);
+  }
+
+  Future<Response> deleteWedding(int id) {
+    return _dio.delete('/weddings/$id/');
+  }
+
+  // Guests
+  Future<Response> getGuests(int weddingId) {
+    return _dio.get('/weddings/$weddingId/guests/');
+  }
+
+  Future<Response> createGuest(int weddingId, Map<String, dynamic> data) {
+    return _dio.post('/weddings/$weddingId/guests/', data: data);
+  }
+
+  Future<Response> updateGuest(int weddingId, int guestId, Map<String, dynamic> data) {
+    return _dio.put('/weddings/$weddingId/guests/$guestId/', data: data);
+  }
+
+  Future<Response> deleteGuest(int weddingId, int guestId) {
+    return _dio.delete('/weddings/$weddingId/guests/$guestId/');
+  }
+
+  // Pledges
+  Future<Response> getPledges(int weddingId) {
+    return _dio.get('/weddings/$weddingId/pledges/');
+  }
+
+  Future<Response> createPledge(int weddingId, Map<String, dynamic> data) {
+    return _dio.post('/weddings/$weddingId/pledges/', data: data);
+  }
+
+  Future<Response> updatePledge(int weddingId, int pledgeId, Map<String, dynamic> data) {
+    return _dio.put('/weddings/$weddingId/pledges/$pledgeId/', data: data);
+  }
+
+  Future<Response> deletePledge(int weddingId, int pledgeId) {
+    return _dio.delete('/weddings/$weddingId/pledges/$pledgeId/');
+  }
+
+  Future<Response> getPledgeSummary(int weddingId) {
+    return _dio.get('/weddings/$weddingId/pledges/summary/');
+  }
+
+  Future<Response> recordPayment(int weddingId, int pledgeId, Map<String, dynamic> data) {
+    return _dio.post('/weddings/$weddingId/pledges/$pledgeId/record_payment/', data: data);
+  }
+
+  // Tasks
+  Future<Response> getTasks(int weddingId) {
+    return _dio.get('/weddings/$weddingId/tasks/');
+  }
+
+  Future<Response> createTask(int weddingId, Map<String, dynamic> data) {
+    return _dio.post('/weddings/$weddingId/tasks/', data: data);
+  }
+
+  // Budget
+  Future<Response> getBudgetItems(int weddingId) {
+    return _dio.get('/weddings/$weddingId/budget/');
+  }
+
+  Future<Response> createBudgetItem(int weddingId, Map<String, dynamic> data) {
+    return _dio.post('/weddings/$weddingId/budget/', data: data);
+  }
+}
+```
+
+---
+
+## Phase 7: Providers (State Management)
+
+### 7.1 Auth Provider
+
+Create `lib/providers/auth_provider.dart`:
+
+```dart
+import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import '../services/storage_service.dart';
+
+class AuthProvider with ChangeNotifier {
+  final ApiService _apiService = ApiService();
+  
+  bool _isAuthenticated = false;
+  bool _isLoading = true;
+  Map<String, dynamic>? _user;
+
+  bool get isAuthenticated => _isAuthenticated;
+  bool get isLoading => _isLoading;
+  Map<String, dynamic>? get user => _user;
+
+  AuthProvider() {
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final token = await StorageService.getToken();
+    final user = await StorageService.getUser();
+    
+    if (token != null && user != null) {
+      _isAuthenticated = true;
+      _user = user;
+    }
+    
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> login(String username, String password) async {
+    try {
+      final response = await _apiService.login(username, password);
+      final token = response.data['token'];
+      
+      await StorageService.saveToken(token);
+      
+      final userResponse = await _apiService.getUser();
+      _user = userResponse.data;
+      await StorageService.saveUser(_user!);
+      
+      _isAuthenticated = true;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      print('Login error: $e');
+      return false;
+    }
+  }
+
+  Future<void> logout() async {
+    await StorageService.clearAll();
+    _isAuthenticated = false;
+    _user = null;
+    notifyListeners();
+  }
+
+  Future<bool> register(String username, String email, String password) async {
+    try {
+      await _apiService.register(username, email, password);
+      return true;
+    } catch (e) {
+      print('Register error: $e');
+      return false;
+    }
+  }
+}
+```
+
+### 7.2 Wedding Provider
+
+Create `lib/providers/wedding_provider.dart`:
+
+```dart
+import 'package:flutter/material.dart';
+import '../models/wedding.dart';
+import '../services/api_service.dart';
+
+class WeddingProvider with ChangeNotifier {
+  final ApiService _apiService = ApiService();
+  
+  List<Wedding> _weddings = [];
+  Wedding? _currentWedding;
+  bool _isLoading = false;
+
+  List<Wedding> get weddings => _weddings;
+  Wedding? get currentWedding => _currentWedding;
+  bool get isLoading => _isLoading;
+
+  Future<void> fetchWeddings() async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      final response = await _apiService.getWeddings();
+      _weddings = (response.data as List)
+          .map((json) => Wedding.fromJson(json))
+          .toList();
+    } catch (e) {
+      print('Error fetching weddings: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchWedding(int id) async {
+    try {
+      final response = await _apiService.getWedding(id);
+      _currentWedding = Wedding.fromJson(response.data);
+      notifyListeners();
+    } catch (e) {
+      print('Error fetching wedding: $e');
+    }
+  }
+
+  Future<bool> createWedding(Wedding wedding) async {
+    try {
+      await _apiService.createWedding(wedding.toJson());
+      await fetchWeddings();
+      return true;
+    } catch (e) {
+      print('Error creating wedding: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteWedding(int id) async {
+    try {
+      await _apiService.deleteWedding(id);
+      await fetchWeddings();
+      return true;
+    } catch (e) {
+      print('Error deleting wedding: $e');
+      return false;
+    }
+  }
+}
+```
+
+---
+
+## Phase 8: Screens
+
+### 8.1 Login Screen
+
+Create `lib/screens/auth/login_screen.dart`:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../config/theme.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.login(
+      _usernameController.text.trim(),
+      _passwordController.text,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (success && mounted) {
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login failed. Check your credentials.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 60),
+                
+                // Logo
+                const Text(
+                  '💒',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 80),
+                ),
+                const SizedBox(height: 16),
+                
+                // Title
+                Text(
+                  'Harusi',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                
+                Text(
+                  'Wedding Management',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 48),
+                
+                // Username Field
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Username',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your username';
+                    }
+                    return null;
+                  },
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 16),
+                
+                // Password Field
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
+                    ),
+                  ),
+                  obscureText: _obscurePassword,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your password';
+                    }
+                    return null;
+                  },
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _handleLogin(),
+                ),
+                const SizedBox(height: 32),
+                
+                // Login Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _handleLogin,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Login',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Register Link
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed('/register');
+                  },
+                  child: RichText(
+                    text: TextSpan(
+                      text: "Don't have an account? ",
+                      style: TextStyle(color: Colors.grey[600]),
+                      children: const [
+                        TextSpan(
+                          text: 'Register',
+                          style: TextStyle(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+### 8.2 Wedding List Screen
+
+Create `lib/screens/wedding/wedding_list_screen.dart`:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../../providers/wedding_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../models/wedding.dart';
+import '../../config/theme.dart';
+
+class WeddingListScreen extends StatefulWidget {
+  const WeddingListScreen({super.key});
+
+  @override
+  State<WeddingListScreen> createState() => _WeddingListScreenState();
+}
+
+class _WeddingListScreenState extends State<WeddingListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<WeddingProvider>(context, listen: false).fetchWeddings();
+    });
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'planning':
+        return AppTheme.info;
+      case 'in_progress':
+        return AppTheme.warning;
+      case 'completed':
+        return AppTheme.success;
+      case 'cancelled':
+        return AppTheme.danger;
