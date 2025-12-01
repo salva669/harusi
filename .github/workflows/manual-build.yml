@@ -1,7 +1,7 @@
 name: Manual Flutter APK Build
 
 on:
-  workflow_dispatch:   # <-- Allows manual trigger
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,7 +14,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.3"  # Change only if your project uses another version
+          flutter-version: "3.24.3"
 
       - name: Install dependencies
         run: flutter pub get
@@ -23,7 +23,7 @@ jobs:
         run: flutter build apk --release
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: harusi-app-release
           path: build/app/outputs/flutter-apk/app-release.apk
