@@ -1,0 +1,29 @@
+name: Manual Flutter APK Build
+
+on:
+  workflow_dispatch:   # <-- Allows manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.3"  # Change only if your project uses another version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: harusi-app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
