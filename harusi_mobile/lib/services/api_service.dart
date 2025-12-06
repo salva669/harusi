@@ -73,7 +73,7 @@ class ApiService {
     required String userType,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/auth/register/'),
+      Uri.parse('$baseUrl/register/'),  // Changed from /auth/register/ to /register/
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email': email,
@@ -99,41 +99,31 @@ class ApiService {
     required String username,
     required String password,
   }) async {
-    // First, get the token
-    final tokenResponse = await http.post(
-      Uri.parse('$baseUrl/auth-token/'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-      }),
-    );
-    
-    if (tokenResponse.statusCode == 200) {
-      final tokenData = jsonDecode(tokenResponse.body);
-      final token = tokenData['token'];
-      await saveToken(token);
-      
-      // Then get user data
-      final userResponse = await http.get(
-        Uri.parse('$baseUrl/user/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Token $token',
-        },
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth-token/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'password': password,
+        }),
       );
       
-      if (userResponse.statusCode == 200) {
-        final userData = jsonDecode(userResponse.body);
-        return {
-          'token': token,
-          'user': userData,
-        };
+      print('Login response status: ${response.statusCode}');
+      print('Login response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['token'] != null) {
+          await saveToken(data['token']);
+        }
+        return data;
       } else {
-        throw Exception('Failed to get user data');
+        throw Exception(_handleError(response));
       }
-    } else {
-      throw Exception(_handleError(tokenResponse));
+    } catch (e) {
+      print('Login error: $e');
+      rethrow;
     }
   }
   
