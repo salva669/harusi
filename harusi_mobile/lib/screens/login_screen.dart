@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:harusi_mobile/screens/home_screen.dart';
+import 'package:harusi_mobile/services/api_service.dart';
 import 'registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
+  // ignore: use_super_parameters
   const LoginScreen({Key? key}) : super(key: key);
 
   @override
@@ -10,14 +13,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -26,13 +29,35 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       
-      // TODO: Implement API call to your Django backend
-      await Future.delayed(const Duration(seconds: 2)); // Simulating API call
-      
-      setState(() => _isLoading = false);
-      
-      // Navigate to home screen after successful login
-      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+      try {
+        final response = await ApiService.login(
+          username: _usernameController.text,
+          password: _passwordController.text,
+        );
+        
+        setState(() => _isLoading = false);
+        
+        // Navigate to home screen after successful login
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => HomeScreen(userId: response['user']['id']),
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceAll('Exception: ', '')),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -80,21 +105,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 const SizedBox(height: 50),
                 
-                // Email Field
+                // Username Field
                 TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
+                  controller: _usernameController,
+                  keyboardType: TextInputType.text,
                   decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'Enter your email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                    labelText: 'Username',
+                    hintText: 'Enter your username',
+                    prefixIcon: Icon(Icons.person_outline),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
+                      return 'Please enter your username';
                     }
                     return null;
                   },
@@ -139,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: Navigate to forgot password screen
+                      
                     },
                     child: Text(
                       'Forgot Password?',
