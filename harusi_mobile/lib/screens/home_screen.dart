@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/wedding.dart';
 import '../services/api_service.dart';
-import 'wedding_screen.dart';
+import 'create_wedding_screen.dart';
 import 'guests_screen.dart';
 import 'tasks_screen.dart';
 import 'budget_screen.dart';
