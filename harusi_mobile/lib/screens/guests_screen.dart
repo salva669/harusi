@@ -586,7 +586,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                     dietaryRestrictions: dietaryController.text.trim().isNotEmpty ? dietaryController.text.trim() : null,
                   );
 
-                  await ApiService.createGuest(guest);
+                  await ApiService.createGuest(widget.wedding.id!, guest);
                   Navigator.pop(context);
                   _loadGuests();
                   
@@ -742,7 +742,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                     dietaryRestrictions: dietaryController.text.trim().isNotEmpty ? dietaryController.text.trim() : null,
                   );
 
-                  await ApiService.updateGuest(guest.id!, updatedGuest);
+                  await ApiService.updateGuest(widget.wedding.id!, guest.id!, updatedGuest);
                   Navigator.pop(context);
                   _loadGuests();
                   
@@ -793,7 +793,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
 
     if (confirm == true && guest.id != null) {
       try {
-        await ApiService.deleteGuest(guest.id!);
+        await ApiService.deleteGuest(widget.wedding.id!, guest.id!);
         _loadGuests();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
