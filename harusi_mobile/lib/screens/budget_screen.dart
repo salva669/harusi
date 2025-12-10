@@ -243,7 +243,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
                   );
 
-                  await ApiService.createBudgetItem(budgetData);
+                  await ApiService.createBudgetItem(widget.wedding.id!, budgetData);
                   Navigator.pop(context);
                   _loadBudgetItems();
                   
