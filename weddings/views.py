@@ -20,6 +20,20 @@ class WeddingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Wedding.objects.filter(user=self.request.user)
     
+    def create(self, request, *args, **kwargs):
+        print("=" * 50)
+        print("Wedding creation attempt")
+        print(f"Request data: {request.data}")
+        print(f"User: {request.user}")
+        print(f"User authenticated: {request.user.is_authenticated}")
+        print("=" * 50)
+        
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print(f"Validation errors: {serializer.errors}")
+        
+        return super().create(request, *args, **kwargs)
+    
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
     
@@ -48,10 +62,24 @@ class GuestViewSet(viewsets.ModelViewSet):
         wedding_id = self.kwargs.get('wedding_id')
         return Guest.objects.filter(wedding_id=wedding_id, wedding__user=self.request.user)
     
+    def create(self, request, *args, **kwargs):
+        print("=" * 50)
+        print("Guest creation attempt")
+        print(f"Request data: {request.data}")
+        print(f"Wedding ID from URL: {self.kwargs.get('wedding_id')}")
+        print(f"User: {request.user}")
+        print("=" * 50)
+        
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print(f"Validation errors: {serializer.errors}")
+        
+        return super().create(request, *args, **kwargs)
+    
     def perform_create(self, serializer):
         wedding_id = self.kwargs.get('wedding_id')
-        wedding = get_object_or_404(Wedding, id=wedding_id, user=self.request.user)
-        serializer.save(wedding=wedding)  
+        wedding = Wedding.objects.get(id=wedding_id, user=self.request.user)
+        serializer.save(wedding=wedding) 
 
 
 class TaskViewSet(viewsets.ModelViewSet):
