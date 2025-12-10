@@ -385,7 +385,7 @@ class _TasksScreenState extends State<TasksScreen> with SingleTickerProviderStat
         cost: task.cost,
       );
 
-      await ApiService.updateTask(task.id!, updatedTask);
+      await ApiService.updateTask(widget.wedding.id!, task.id!, updatedTask);
       _loadTasks();
       
       if (mounted) {
@@ -568,9 +568,9 @@ class _TasksScreenState extends State<TasksScreen> with SingleTickerProviderStat
                   );
 
                   if (isEdit) {
-                    await ApiService.updateTask(task.id!, taskData);
+                    await ApiService.updateTask(widget.wedding.id!, task.id!, taskData);
                   } else {
-                    await ApiService.createTask(taskData);
+                    await ApiService.createTask(widget.wedding.id!, taskData);
                   }
 
                   Navigator.pop(context);
@@ -623,7 +623,7 @@ class _TasksScreenState extends State<TasksScreen> with SingleTickerProviderStat
 
     if (confirm == true && task.id != null) {
       try {
-        await ApiService.deleteTask(task.id!);
+        await ApiService.deleteTask(widget.wedding.id!, task.id!);
         _loadTasks();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
