@@ -82,7 +82,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
     }
   }
 
-  IconData _getRelationshipIcon(String relationship) {
+  IconData _getRelationshipIcon(String? relationship) {
     switch (relationship) {
       case 'family':
         return Icons.family_restroom;
@@ -312,14 +312,13 @@ class _GuestsScreenState extends State<GuestsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            if (guest.phone != null && guest.phone!.isNotEmpty)
-              Row(
-                children: [
-                  Icon(Icons.phone, size: 14, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text(guest.phone!),
-                ],
-              ),
+            Row(
+              children: [
+                Icon(Icons.phone, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(guest.phone),
+              ],
+            ),
             const SizedBox(height: 4),
             Row(
               children: [
@@ -464,7 +463,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
     final phoneController = TextEditingController();
     final emailController = TextEditingController();
     final dietaryController = TextEditingController();
-    String relationship = 'friend';
+    String? relationship = 'friend';
     String rsvpStatus = 'pending';
     int numberOfGuests = 1;
 
@@ -489,7 +488,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                 TextField(
                   controller: phoneController,
                   decoration: const InputDecoration(
-                    labelText: 'Phone',
+                    labelText: 'Phone *',
                     border: OutlineInputBorder(),
                     prefixText: '+255 ',
                   ),
@@ -499,7 +498,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                 TextField(
                   controller: emailController,
                   decoration: const InputDecoration(
-                    labelText: 'Email',
+                    labelText: 'Email (Optional)',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -508,7 +507,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                 DropdownButtonFormField<String>(
                   value: relationship,
                   decoration: const InputDecoration(
-                    labelText: 'Relationship',
+                    labelText: 'Relationship (Optional)',
                     border: OutlineInputBorder(),
                   ),
                   items: const [
@@ -517,7 +516,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                     DropdownMenuItem(value: 'colleague', child: Text('Colleague')),
                     DropdownMenuItem(value: 'other', child: Text('Other')),
                   ],
-                  onChanged: (value) => setDialogState(() => relationship = value!),
+                  onChanged: (value) => setDialogState(() => relationship = value),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -573,12 +572,19 @@ class _GuestsScreenState extends State<GuestsScreen> {
                   );
                   return;
                 }
+                
+                if (phoneController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a phone number')),
+                  );
+                  return;
+                }
 
                 try {
                   final guest = Guest(
                     weddingId: widget.wedding.id!,
                     name: nameController.text.trim(),
-                    phone: phoneController.text.trim().isNotEmpty ? phoneController.text.trim() : null,
+                    phone: phoneController.text.trim(),
                     email: emailController.text.trim().isNotEmpty ? emailController.text.trim() : null,
                     relationship: relationship,
                     rsvpStatus: rsvpStatus,
@@ -617,10 +623,10 @@ class _GuestsScreenState extends State<GuestsScreen> {
 
   void _showEditGuestDialog(Guest guest) {
     final nameController = TextEditingController(text: guest.name);
-    final phoneController = TextEditingController(text: guest.phone ?? '');
+    final phoneController = TextEditingController(text: guest.phone);
     final emailController = TextEditingController(text: guest.email ?? '');
     final dietaryController = TextEditingController(text: guest.dietaryRestrictions ?? '');
-    String relationship = guest.relationship;
+    String? relationship = guest.relationship ?? 'friend';
     String rsvpStatus = guest.rsvpStatus;
     int numberOfGuests = guest.numberOfGuests;
 
@@ -645,8 +651,9 @@ class _GuestsScreenState extends State<GuestsScreen> {
                 TextField(
                   controller: phoneController,
                   decoration: const InputDecoration(
-                    labelText: 'Phone',
+                    labelText: 'Phone *',
                     border: OutlineInputBorder(),
+                    prefixText: '+255 ',
                   ),
                   keyboardType: TextInputType.phone,
                 ),
@@ -654,7 +661,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                 TextField(
                   controller: emailController,
                   decoration: const InputDecoration(
-                    labelText: 'Email',
+                    labelText: 'Email (Optional)',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -663,7 +670,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                 DropdownButtonFormField<String>(
                   value: relationship,
                   decoration: const InputDecoration(
-                    labelText: 'Relationship',
+                    labelText: 'Relationship (Optional)',
                     border: OutlineInputBorder(),
                   ),
                   items: const [
@@ -672,7 +679,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                     DropdownMenuItem(value: 'colleague', child: Text('Colleague')),
                     DropdownMenuItem(value: 'other', child: Text('Other')),
                   ],
-                  onChanged: (value) => setDialogState(() => relationship = value!),
+                  onChanged: (value) => setDialogState(() => relationship = value),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -728,13 +735,20 @@ class _GuestsScreenState extends State<GuestsScreen> {
                   );
                   return;
                 }
+                
+                if (phoneController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a phone number')),
+                  );
+                  return;
+                }
 
                 try {
                   final updatedGuest = Guest(
                     id: guest.id,
                     weddingId: widget.wedding.id!,
                     name: nameController.text.trim(),
-                    phone: phoneController.text.trim().isNotEmpty ? phoneController.text.trim() : null,
+                    phone: phoneController.text.trim(),
                     email: emailController.text.trim().isNotEmpty ? emailController.text.trim() : null,
                     relationship: relationship,
                     rsvpStatus: rsvpStatus,
