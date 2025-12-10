@@ -229,10 +229,10 @@ class ApiService {
     }
   }
   
-  static Future<Guest> createGuest(Guest guest) async {
+  static Future<Guest> createGuest(int weddingId, Guest guest) async {
     final headers = await _getHeaders();
     final response = await http.post(
-      Uri.parse('$baseUrl/guests/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/guests/'),
       headers: headers,
       body: jsonEncode(guest.toJson()),
     );
@@ -244,10 +244,10 @@ class ApiService {
     }
   }
   
-  static Future<Guest> updateGuest(int id, Guest guest) async {
+  static Future<Guest> updateGuest(int weddingId, int id, Guest guest) async {
     final headers = await _getHeaders();
     final response = await http.put(
-      Uri.parse('$baseUrl/guests/$id/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/guests/$id/'),
       headers: headers,
       body: jsonEncode(guest.toJson()),
     );
@@ -259,10 +259,10 @@ class ApiService {
     }
   }
   
-  static Future<void> deleteGuest(int id) async {
+  static Future<void> deleteGuest(int weddingId, int id) async {
     final headers = await _getHeaders();
     final response = await http.delete(
-      Uri.parse('$baseUrl/guests/$id/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/guests/$id/'),
       headers: headers,
     );
     
@@ -288,10 +288,10 @@ class ApiService {
     }
   }
   
-  static Future<Task> createTask(Task task) async {
+  static Future<Task> createTask(int weddingId, Task task) async {
     final headers = await _getHeaders();
     final response = await http.post(
-      Uri.parse('$baseUrl/tasks/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/tasks/'),
       headers: headers,
       body: jsonEncode(task.toJson()),
     );
@@ -303,10 +303,10 @@ class ApiService {
     }
   }
   
-  static Future<Task> updateTask(int id, Task task) async {
+  static Future<Task> updateTask(int weddingId, int id, Task task) async {
     final headers = await _getHeaders();
     final response = await http.put(
-      Uri.parse('$baseUrl/tasks/$id/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/tasks/$id/'),
       headers: headers,
       body: jsonEncode(task.toJson()),
     );
@@ -318,10 +318,10 @@ class ApiService {
     }
   }
   
-  static Future<void> deleteTask(int id) async {
+  static Future<void> deleteTask(int weddingId, int id) async {
     final headers = await _getHeaders();
     final response = await http.delete(
-      Uri.parse('$baseUrl/tasks/$id/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/tasks/$id/'),
       headers: headers,
     );
     
@@ -347,10 +347,10 @@ class ApiService {
     }
   }
   
-  static Future<Budget> createBudgetItem(Budget budget) async {
+  static Future<Budget> createBudgetItem(int weddingId, Budget budget) async {
     final headers = await _getHeaders();
     final response = await http.post(
-      Uri.parse('$baseUrl/budget/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/budget/'),
       headers: headers,
       body: jsonEncode(budget.toJson()),
     );
@@ -379,10 +379,10 @@ class ApiService {
     }
   }
   
-  static Future<Vendor> createVendor(Vendor vendor) async {
+  static Future<Vendor> createVendor(int weddingId, Vendor vendor) async {
     final headers = await _getHeaders();
     final response = await http.post(
-      Uri.parse('$baseUrl/vendors/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/vendors/'),
       headers: headers,
       body: jsonEncode(vendor.toJson()),
     );
@@ -411,10 +411,10 @@ class ApiService {
     }
   }
   
-  static Future<GuestPledge> createPledge(GuestPledge pledge) async {
+  static Future<GuestPledge> createPledge(int weddingId, GuestPledge pledge) async {
     final headers = await _getHeaders();
     final response = await http.post(
-      Uri.parse('$baseUrl/pledges/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/pledges/'),
       headers: headers,
       body: jsonEncode(pledge.toJson()),
     );
@@ -443,10 +443,10 @@ class ApiService {
     }
   }
   
-  static Future<Timeline> createTimelineEvent(Timeline timeline) async {
+  static Future<Timeline> createTimelineEvent(int weddingId, Timeline timeline) async {
     final headers = await _getHeaders();
     final response = await http.post(
-      Uri.parse('$baseUrl/timeline/'),
+      Uri.parse('$baseUrl/weddings/$weddingId/timeline/'),
       headers: headers,
       body: jsonEncode(timeline.toJson()),
     );
