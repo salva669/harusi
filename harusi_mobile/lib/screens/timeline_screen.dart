@@ -588,7 +588,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     isCompleted: false,
                   );
 
-                  await ApiService.createTimelineEvent(timelineData);
+                  await ApiService.createTimelineEvent(widget.wedding.id!, timelineData);
                   Navigator.pop(context);
                   _loadEvents();
 
