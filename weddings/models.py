@@ -44,12 +44,12 @@ class Guest(models.Model):
     
     wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='guests')
     name = models.CharField(max_length=100)
-    phone = models.CharField(max_length=20, blank=True)
-    email = models.EmailField(blank=True)
-    relationship = models.CharField(max_length=20, choices=RELATIONSHIP_CHOICES)
+    phone = models.CharField(max_length=20)  
+    email = models.EmailField(blank=True, null=True)  
+    relationship = models.CharField(max_length=20, choices=RELATIONSHIP_CHOICES, blank=True, null=True)  
     rsvp_status = models.CharField(max_length=20, choices=RSVP_CHOICES, default='pending')
     number_of_guests = models.IntegerField(default=1, validators=[MinValueValidator(1)])
-    dietary_restrictions = models.CharField(max_length=255, blank=True)
+    dietary_restrictions = models.CharField(max_length=255, blank=True, null=True)  
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
