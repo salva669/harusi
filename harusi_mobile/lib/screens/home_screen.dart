@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/wedding.dart';
+import '../services/api_service.dart';
+import 'wedding_screen.dart';
 import 'guests_screen.dart';
 import 'tasks_screen.dart';
 import 'budget_screen.dart';
@@ -7,7 +9,9 @@ import 'vendors_screen.dart';
 import 'timeline_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key, required userId}) : super(key: key);
+  final int userId;
+  
+  const HomeScreen({Key? key, required this.userId}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -16,34 +20,38 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   Wedding? _currentWedding;
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadMockWedding();
+    _loadWedding();
   }
 
-  Future<void> _loadMockWedding() async {
-    setState(() => _isLoading = true);
-    
-    // Simulate loading
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    // Create mock wedding data for POC
+  Future<void> _loadWedding() async {
     setState(() {
-      _currentWedding = Wedding(
-        id: 1,
-        userId: 1,
-        brideName: 'Sarah',
-        groomName: 'John',
-        weddingDate: DateTime.now().add(const Duration(days: 90)),
-        venue: 'Serena Hotel, Dar es Salaam',
-        budget: 25000000, // 25M TZS
-        status: 'planning',
-        description: 'Our dream wedding celebration',
-      );
-      _isLoading = false;
+      _isLoading = true;
+      _error = null;
     });
+
+    try {
+      final weddings = await ApiService.getWeddings();
+      if (weddings.isNotEmpty) {
+        setState(() {
+          _currentWedding = weddings.first;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   int _daysUntilWedding() {
@@ -111,9 +119,11 @@ class _HomeScreenState extends State<HomeScreen> {
       drawer: _buildDrawer(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _currentWedding == null
-              ? _buildNoWeddingState()
-              : _buildDashboard(),
+          : _error != null
+              ? _buildErrorState()
+              : _currentWedding == null
+                  ? _buildNoWeddingState()
+                  : _buildDashboard(),
     );
   }
 
@@ -130,9 +140,15 @@ class _HomeScreenState extends State<HomeScreen> {
               'Error loading wedding',
               style: Theme.of(context).textTheme.titleLarge,
             ),
+            const SizedBox(height: 8),
+            Text(
+              _error ?? 'Unknown error',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: _loadMockWedding,
+              onPressed: _loadWedding,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
             ),
@@ -167,13 +183,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Create Wedding - Coming Soon')),
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateWeddingScreen(userId: widget.userId),
+                  ),
                 );
+                
+                // If a wedding was created, reload the weddings
+                if (result != null) {
+                  _loadWedding();
+                }
               },
               icon: const Icon(Icons.add),
               label: const Text('Create Wedding'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
             ),
           ],
         ),
@@ -185,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final daysLeft = _daysUntilWedding();
 
     return RefreshIndicator(
-      onRefresh: _loadMockWedding,
+      onRefresh: _loadWedding,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
@@ -340,58 +367,65 @@ class _HomeScreenState extends State<HomeScreen> {
                         'Guests',
                         Icons.people,
                         Colors.blue,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => GuestsScreen(wedding: _currentWedding!),
-                          ),
-                        ),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => GuestsScreen(wedding: _currentWedding!),
+                            ),
+                          );
+                        },
                       ),
                       _buildQuickActionCard(
                         'Tasks',
                         Icons.checklist,
                         Colors.orange,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TasksScreen(wedding: _currentWedding!),
-                          ),
-                        ),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TasksScreen(wedding: _currentWedding!),
+                            ),
+                          );
+                        },
                       ),
                       _buildQuickActionCard(
                         'Budget',
                         Icons.account_balance_wallet,
                         Colors.green,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BudgetScreen(wedding: _currentWedding!),
-                          ),
-                        ),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BudgetScreen(wedding: _currentWedding!),
+                            ),
+                          );
+                        },
                       ),
                       _buildQuickActionCard(
                         'Vendors',
                         Icons.business,
                         Colors.purple,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => VendorsScreen(wedding: _currentWedding!),
-                          ),
-                        ),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => VendorsScreen(wedding: _currentWedding!),
+                            ),
+                          );
+                        },
                       ),
                       _buildQuickActionCard(
                         'Timeline',
                         Icons.event_note,
                         Colors.teal,
                         () {
-                          // TODO: Navigate to Timeline screen
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //     builder: (_) => TimelineScreen(wedding: _currentWedding!),
-                          //   ),
-                          // );
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TimelineScreen(wedding: _currentWedding!),
+                            ),
+                          );
                         },
                       ),
                       _buildQuickActionCard(
@@ -493,6 +527,23 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.add_circle_outline),
+            title: const Text('Create New Wedding'),
+            onTap: () async {
+              Navigator.pop(context);
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CreateWeddingScreen(userId: widget.userId),
+                ),
+              );
+              
+              if (result != null) {
+                _loadWedding();
+              }
+            },
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.settings),
@@ -517,11 +568,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Logout - Coming Soon')),
-              );
+            onTap: () async {
+              await ApiService.logout();
+              if (mounted) {
+                Navigator.of(context).pushReplacementNamed('/login');
+              }
             },
           ),
         ],
