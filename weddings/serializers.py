@@ -28,8 +28,8 @@ class TaskSerializer(serializers.ModelSerializer):
 class GuestSerializer(serializers.ModelSerializer):
     class Meta:
         model = Guest
-        fields = ['id', 'name', 'email', 'phone', 'relationship', 'rsvp_status', 'number_of_guests', 'dietary_restrictions', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'wedding', 'name', 'email', 'phone', 'relationship', 'rsvp_status', 'number_of_guests', 'dietary_restrictions', 'created_at']
+        read_only_fields = ['id', 'wedding', 'created_at']  
 
 
 class WeddingSerializer(serializers.ModelSerializer):
