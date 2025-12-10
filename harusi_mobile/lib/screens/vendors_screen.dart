@@ -308,7 +308,7 @@ class _VendorsScreenState extends State<VendorsScreen> {
                     vendorNotes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
                   );
 
-                  await ApiService.createVendor(vendorData);
+                  await ApiService.createVendor(widget.wedding.id!, vendorData);
                   Navigator.pop(context);
                   _loadVendors();
                   
