@@ -2,9 +2,9 @@ class Guest {
   final int? id;
   final int weddingId;
   final String name;
-  final String? phone;
+  final String phone;  // No longer nullable
   final String? email;
-  final String relationship;
+  final String? relationship;  // Made nullable
   final String rsvpStatus;
   final int numberOfGuests;
   final String? dietaryRestrictions;
@@ -14,9 +14,9 @@ class Guest {
     this.id,
     required this.weddingId,
     required this.name,
-    this.phone,
+    required this.phone,  // Required
     this.email,
-    required this.relationship,
+    this.relationship,  // Optional
     this.rsvpStatus = 'pending',
     this.numberOfGuests = 1,
     this.dietaryRestrictions,
@@ -40,7 +40,6 @@ class Guest {
 
   Map<String, dynamic> toJson() {
     return {
-      'wedding': weddingId,
       'name': name,
       'phone': phone,
       'email': email,
