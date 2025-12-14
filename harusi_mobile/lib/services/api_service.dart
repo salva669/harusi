@@ -425,6 +425,20 @@ class ApiService {
       throw Exception(_handleError(response));
     }
   }
+
+  static Future<PledgePayment> recordPledgePayment(int weddingId, int pledgeId, PledgePayment payment) async {
+  final response = await http.post(
+    Uri.parse('$baseUrl/weddings/$weddingId/pledges/$pledgeId/payments/'),
+    headers: await _getAuthHeaders(),
+    body: json.encode(payment.toJson()),
+  );
+
+  if (response.statusCode == 201) {
+    return PledgePayment.fromJson(json.decode(response.body));
+  } else {
+    throw Exception('Failed to record payment: ${response.body}');
+  }
+  }
   
   // ============ TIMELINE ============
   
