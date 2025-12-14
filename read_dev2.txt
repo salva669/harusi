@@ -1,0 +1,2410 @@
+# Harusi Wedding Management System - Advanced Features
+## Photo Gallery, Timeline, Vendors, Email Notifications & PDF Generation
+
+---
+
+## Phase 1: Backend Advanced Models
+
+### 1.1 Update Django Models
+
+Edit `weddings/models.py` and add these models:
+
+```python
+from django.db import models
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
+
+# ... existing models ...
+
+class PhotoGallery(models.Model):
+    ALBUM_TYPES = [
+        ('pre_wedding', 'Pre-Wedding'),
+        ('ceremony', 'Ceremony'),
+        ('reception', 'Reception'),
+        ('other', 'Other'),
+    ]
+    
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='photo_albums')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    album_type = models.CharField(max_length=50, choices=ALBUM_TYPES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.title} - {self.wedding}"
+
+
+class Photo(models.Model):
+    album = models.ForeignKey(PhotoGallery, on_delete=models.CASCADE, related_name='photos')
+    image = models.ImageField(upload_to='wedding_photos/%Y/%m/%d/')
+    caption = models.CharField(max_length=255, blank=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+    
+    def __str__(self):
+        return f"Photo in {self.album.title}"
+
+
+class Timeline(models.Model):
+    EVENT_TYPES = [
+        ('save_date', 'Save the Date'),
+        ('invitation', 'Send Invitations'),
+        ('rsvp_deadline', 'RSVP Deadline'),
+        ('final_headcount', 'Final Headcount'),
+        ('ceremony_rehearsal', 'Ceremony Rehearsal'),
+        ('wedding_day', 'Wedding Day'),
+        ('honeymoon', 'Honeymoon'),
+        ('thank_you', 'Send Thank You Cards'),
+        ('other', 'Other'),
+    ]
+    
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='timeline_events')
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    date = models.DateField()
+    time = models.TimeField(null=True, blank=True)
+    location = models.CharField(max_length=255, blank=True)
+    is_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['date']
+    
+    def __str__(self):
+        return f"{self.title} - {self.date}"
+
+
+class Vendor(models.Model):
+    VENDOR_TYPES = [
+        ('venue', 'Venue'),
+        ('catering', 'Catering'),
+        ('photography', 'Photography'),
+        ('videography', 'Videography'),
+        ('flowers', 'Flowers & Decoration'),
+        ('music', 'Music & DJ'),
+        ('transportation', 'Transportation'),
+        ('accommodation', 'Accommodation'),
+        ('invitation', 'Invitation & Stationery'),
+        ('makeup', 'Makeup & Hair'),
+        ('wedding_planner', 'Wedding Planner'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('inquiry', 'Inquiry'),
+        ('negotiating', 'Negotiating'),
+        ('booked', 'Booked'),
+        ('completed', 'Completed'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='vendors')
+    vendor_type = models.CharField(max_length=50, choices=VENDOR_TYPES)
+    business_name = models.CharField(max_length=200)
+    contact_person = models.CharField(max_length=100)
+    phone = models.CharField(max_length=20)
+    email = models.EmailField()
+    website = models.URLField(blank=True)
+    quote = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    deposit_paid = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    final_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inquiry')
+    notes = models.TextField(blank=True)
+    contract_file = models.FileField(upload_to='vendor_contracts/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['vendor_type', 'status']
+    
+    def __str__(self):
+        return f"{self.business_name} ({self.vendor_type})"
+
+
+class VendorNote(models.Model):
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='notes')
+    content = models.TextField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+
+
+class InvitationTemplate(models.Model):
+    wedding = models.OneToOneField(Wedding, on_delete=models.CASCADE, related_name='invitation_template')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    ceremony_time = models.TimeField(null=True, blank=True)
+    ceremony_location = models.CharField(max_length=255, blank=True)
+    reception_time = models.TimeField(null=True, blank=True)
+    reception_location = models.CharField(max_length=255, blank=True)
+    dress_code = models.CharField(max_length=100, blank=True)
+    rsvp_deadline = models.DateField(null=True, blank=True)
+    rsvp_email = models.EmailField()
+    custom_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Invitation - {self.wedding}"
+```
+
+### 1.2 Create Advanced Serializers
+
+Update `weddings/serializers.py`:
+
+```python
+from rest_framework import serializers
+from .models import (
+    Wedding, Guest, Task, Budget, PhotoGallery, Photo,
+    Timeline, Vendor, VendorNote, InvitationTemplate
+)
+
+# ... existing serializers ...
+
+class PhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Photo
+        fields = '__all__'
+
+
+class PhotoGallerySerializer(serializers.ModelSerializer):
+    photos = PhotoSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = PhotoGallery
+        fields = '__all__'
+
+
+class TimelineSerializer(serializers.ModelSerializer):
+    days_until = serializers.SerializerMethodField()
+    
+    def get_days_until(self, obj):
+        from datetime import date
+        today = date.today()
+        delta = (obj.date - today).days
+        return delta
+    
+    class Meta:
+        model = Timeline
+        fields = '__all__'
+
+
+class VendorNoteSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    
+    class Meta:
+        model = VendorNote
+        fields = '__all__'
+
+
+class VendorSerializer(serializers.ModelSerializer):
+    notes = VendorNoteSerializer(many=True, read_only=True)
+    remaining_amount = serializers.SerializerMethodField()
+    
+    def get_remaining_amount(self, obj):
+        if obj.final_amount and obj.deposit_paid:
+            return obj.final_amount - obj.deposit_paid
+        return obj.final_amount
+    
+    class Meta:
+        model = Vendor
+        fields = '__all__'
+
+
+class InvitationTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvitationTemplate
+        fields = '__all__'
+```
+
+### 1.3 Create Advanced ViewSets
+
+Update `weddings/views.py`:
+
+```python
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from .models import (
+    Wedding, Guest, Task, Budget, PhotoGallery, Photo,
+    Timeline, Vendor, VendorNote, InvitationTemplate
+)
+from .serializers import (
+    WeddingSerializer, GuestSerializer, TaskSerializer, BudgetSerializer,
+    PhotoGallerySerializer, PhotoSerializer, TimelineSerializer,
+    VendorSerializer, VendorNoteSerializer, InvitationTemplateSerializer
+)
+
+# ... existing viewsets ...
+
+class PhotoGalleryViewSet(viewsets.ModelViewSet):
+    serializer_class = PhotoGallerySerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        wedding_id = self.kwargs.get('wedding_id')
+        return PhotoGallery.objects.filter(wedding_id=wedding_id, wedding__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        wedding_id = self.kwargs.get('wedding_id')
+        wedding = get_object_or_404(Wedding, id=wedding_id, user=self.request.user)
+        serializer.save(wedding=wedding)
+
+
+class PhotoViewSet(viewsets.ModelViewSet):
+    serializer_class = PhotoSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        album_id = self.kwargs.get('album_id')
+        return Photo.objects.filter(album_id=album_id, album__wedding__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        album_id = self.kwargs.get('album_id')
+        album = get_object_or_404(PhotoGallery, id=album_id, wedding__user=self.request.user)
+        serializer.save(album=album, uploaded_by=self.request.user)
+
+
+class TimelineViewSet(viewsets.ModelViewSet):
+    serializer_class = TimelineSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        wedding_id = self.kwargs.get('wedding_id')
+        return Timeline.objects.filter(wedding_id=wedding_id, wedding__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        wedding_id = self.kwargs.get('wedding_id')
+        wedding = get_object_or_404(Wedding, id=wedding_id, user=self.request.user)
+        serializer.save(wedding=wedding)
+    
+    @action(detail=True, methods=['post'])
+    def toggle_completed(self, request, pk=None, **kwargs):
+        event = self.get_object()
+        event.is_completed = not event.is_completed
+        event.save()
+        return Response({'status': 'completed' if event.is_completed else 'pending'})
+
+
+class VendorViewSet(viewsets.ModelViewSet):
+    serializer_class = VendorSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        wedding_id = self.kwargs.get('wedding_id')
+        return Vendor.objects.filter(wedding_id=wedding_id, wedding__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        wedding_id = self.kwargs.get('wedding_id')
+        wedding = get_object_or_404(Wedding, id=wedding_id, user=self.request.user)
+        serializer.save(wedding=wedding)
+    
+    @action(detail=True, methods=['post'])
+    def add_note(self, request, pk=None, **kwargs):
+        vendor = self.get_object()
+        serializer = VendorNoteSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(vendor=vendor, created_by=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class InvitationTemplateViewSet(viewsets.ModelViewSet):
+    serializer_class = InvitationTemplateSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        wedding_id = self.kwargs.get('wedding_id')
+        return InvitationTemplate.objects.filter(wedding_id=wedding_id, wedding__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        wedding_id = self.kwargs.get('wedding_id')
+        wedding = get_object_or_404(Wedding, id=wedding_id, user=self.request.user)
+        serializer.save(wedding=wedding)
+```
+
+### 1.4 Update URLs
+
+Update `weddings/urls.py`:
+
+```python
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import (
+    WeddingViewSet, GuestViewSet, TaskViewSet, BudgetViewSet,
+    PhotoGalleryViewSet, PhotoViewSet, TimelineViewSet,
+    VendorViewSet, InvitationTemplateViewSet
+)
+
+router = DefaultRouter()
+router.register(r'weddings', WeddingViewSet, basename='wedding')
+
+urlpatterns = [
+    path('', include(router.urls)),
+    path('weddings/<int:wedding_id>/guests/', GuestViewSet.as_view({'get': 'list', 'post': 'create'}), name='guest-list'),
+    path('weddings/<int:wedding_id>/guests/<int:pk>/', GuestViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='guest-detail'),
+    
+    path('weddings/<int:wedding_id>/tasks/', TaskViewSet.as_view({'get': 'list', 'post': 'create'}), name='task-list'),
+    path('weddings/<int:wedding_id>/tasks/<int:pk>/', TaskViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='task-detail'),
+    
+    path('weddings/<int:wedding_id>/budget/', BudgetViewSet.as_view({'get': 'list', 'post': 'create'}), name='budget-list'),
+    path('weddings/<int:wedding_id>/budget/<int:pk>/', BudgetViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='budget-detail'),
+    
+    path('weddings/<int:wedding_id>/galleries/', PhotoGalleryViewSet.as_view({'get': 'list', 'post': 'create'}), name='gallery-list'),
+    path('weddings/<int:wedding_id>/galleries/<int:pk>/', PhotoGalleryViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='gallery-detail'),
+    
+    path('weddings/<int:wedding_id>/galleries/<int:album_id>/photos/', PhotoViewSet.as_view({'get': 'list', 'post': 'create'}), name='photo-list'),
+    path('weddings/<int:wedding_id>/galleries/<int:album_id>/photos/<int:pk>/', PhotoViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='photo-detail'),
+    
+    path('weddings/<int:wedding_id>/timeline/', TimelineViewSet.as_view({'get': 'list', 'post': 'create'}), name='timeline-list'),
+    path('weddings/<int:wedding_id>/timeline/<int:pk>/', TimelineViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='timeline-detail'),
+    path('weddings/<int:wedding_id>/timeline/<int:pk>/toggle_completed/', TimelineViewSet.as_view({'post': 'toggle_completed'}), name='timeline-toggle'),
+    
+    path('weddings/<int:wedding_id>/vendors/', VendorViewSet.as_view({'get': 'list', 'post': 'create'}), name='vendor-list'),
+    path('weddings/<int:wedding_id>/vendors/<int:pk>/', VendorViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='vendor-detail'),
+    path('weddings/<int:wedding_id>/vendors/<int:pk>/add_note/', VendorViewSet.as_view({'post': 'add_note'}), name='vendor-add-note'),
+    
+    path('weddings/<int:wedding_id>/invitation/', InvitationTemplateViewSet.as_view({'get': 'list', 'post': 'create'}), name='invitation-list'),
+    path('weddings/<int:wedding_id>/invitation/<int:pk>/', InvitationTemplateViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='invitation-detail'),
+]
+```
+
+---
+
+## Phase 2: Email Notifications
+
+### 2.1 Install Email Dependencies
+
+```bash
+pip install django-celery-beat django-celery-results django-environ python-dotenv
+```
+
+### 2.2 Create Email Service
+
+Create `weddings/email_service.py`:
+
+```python
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
+
+class WeddingEmailService:
+    @staticmethod
+    def send_rsvp_reminder(guest):
+        """Send RSVP reminder to guest"""
+        if guest.rsvp_status != 'pending':
+            return False
+        
+        subject = f"RSVP Reminder for {guest.wedding.bride_name} & {guest.wedding.groom_name}'s Wedding"
+        
+        context = {
+            'guest_name': guest.name,
+            'bride_name': guest.wedding.bride_name,
+            'groom_name': guest.wedding.groom_name,
+            'wedding_date': guest.wedding.wedding_date,
+            'venue': guest.wedding.venue,
+        }
+        
+        html_message = render_to_string('email/rsvp_reminder.html', context)
+        plain_message = strip_tags(html_message)
+        
+        if guest.email:
+            send_mail(
+                subject,
+                plain_message,
+                settings.DEFAULT_FROM_EMAIL,
+                [guest.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            return True
+        return False
+    
+    @staticmethod
+    def send_task_reminder(task):
+        """Send task reminder to assigned person"""
+        if not task.assigned_to or not task.due_date:
+            return False
+        
+        subject = f"Task Reminder: {task.title}"
+        context = {
+            'task_title': task.title,
+            'task_description': task.description,
+            'due_date': task.due_date,
+            'wedding': task.wedding,
+        }
+        
+        html_message = render_to_string('email/task_reminder.html', context)
+        plain_message = strip_tags(html_message)
+        
+        # Send to task creator or user
+        send_mail(
+            subject,
+            plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [task.wedding.user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        return True
+    
+    @staticmethod
+    def send_invitation_email(guest, invitation_template):
+        """Send wedding invitation to guest"""
+        subject = f"You're Invited! {invitation_template.wedding.bride_name} & {invitation_template.wedding.groom_name}"
+        
+        context = {
+            'guest_name': guest.name,
+            'title': invitation_template.title,
+            'description': invitation_template.description,
+            'ceremony_time': invitation_template.ceremony_time,
+            'ceremony_location': invitation_template.ceremony_location,
+            'reception_time': invitation_template.reception_time,
+            'reception_location': invitation_template.reception_location,
+            'dress_code': invitation_template.dress_code,
+            'rsvp_deadline': invitation_template.rsvp_deadline,
+            'rsvp_email': invitation_template.rsvp_email,
+            'custom_message': invitation_template.custom_message,
+        }
+        
+        html_message = render_to_string('email/invitation.html', context)
+        plain_message = strip_tags(html_message)
+        
+        if guest.email:
+            send_mail(
+                subject,
+                plain_message,
+                settings.DEFAULT_FROM_EMAIL,
+                [guest.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            return True
+        return False
+    
+    @staticmethod
+    def send_vendor_reminder(vendor):
+        """Send reminder to vendor"""
+        subject = f"Reminder: {vendor.business_name} - {vendor.wedding} Wedding"
+        
+        context = {
+            'vendor_name': vendor.contact_person,
+            'business_name': vendor.business_name,
+            'wedding_date': vendor.wedding.wedding_date,
+            'wedding_couple': f"{vendor.wedding.bride_name} & {vendor.wedding.groom_name}",
+        }
+        
+        html_message = render_to_string('email/vendor_reminder.html', context)
+        plain_message = strip_tags(html_message)
+        
+        send_mail(
+            subject,
+            plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [vendor.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        return True
+    
+    @staticmethod
+    def send_wedding_countdown(wedding):
+        """Send countdown email"""
+        days_until = (wedding.wedding_date - timezone.now().date()).days
+        
+        subject = f"Only {days_until} Days Until Your Wedding! 🎉"
+        
+        context = {
+            'days_until': days_until,
+            'couple': f"{wedding.bride_name} & {wedding.groom_name}",
+            'wedding_date': wedding.wedding_date,
+        }
+        
+        html_message = render_to_string('email/countdown.html', context)
+        plain_message = strip_tags(html_message)
+        
+        send_mail(
+            subject,
+            plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [wedding.user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        return True
+```
+
+### 2.3 Create Email Templates
+
+Create `templates/email/rsvp_reminder.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; }
+        .content { padding: 20px; background: #f9fafb; }
+        .button { background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💒 RSVP Reminder</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{ guest_name }},</p>
+            <p>This is a friendly reminder about the upcoming wedding of:</p>
+            <h2>{{ bride_name }} & {{ groom_name }}</h2>
+            <p><strong>Date:</strong> {{ wedding_date|date:"F j, Y" }}</p>
+            <p><strong>Venue:</strong> {{ venue }}</p>
+            <p>We would love to have your confirmation! Please let us know if you can make it.</p>
+            <p>Warm regards,<br>The Couple</p>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+Create `templates/email/invitation.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Georgia', serif; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; border-radius: 8px; text-align: center; }
+        .header h1 { margin: 0; font-size: 2em; }
+        .content { padding: 30px; background: white; border: 2px solid #e5e7eb; margin-top: 20px; }
+        .detail { margin: 15px 0; }
+        .detail strong { color: #667eea; }
+        .button { background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{ guest_name }},</p>
+            <p>{{ description }}</p>
+            
+            <div class="detail">
+                <strong>Ceremony:</strong><br>
+                {{ ceremony_time|time:"g:i A" }} at {{ ceremony_location }}
+            </div>
+            
+            <div class="detail">
+                <strong>Reception:</strong><br>
+                {{ reception_time|time:"g:i A" }} at {{ reception_location }}
+            </div>
+            
+            {% if dress_code %}
+            <div class="detail">
+                <strong>Dress Code:</strong> {{ dress_code }}
+            </div>
+            {% endif %}
+            
+            {% if rsvp_deadline %}
+            <div class="detail">
+                <strong>RSVP by:</strong> {{ rsvp_deadline|date:"F j, Y" }}
+            </div>
+            {% endif %}
+            
+            <p>{{ custom_message }}</p>
+            
+            <p>To confirm your attendance, please email: <a href="mailto:{{ rsvp_email }}">{{ rsvp_email }}</a></p>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+### 2.4 Update Settings for Email
+
+Edit `harusi_backend/settings.py`:
+
+```python
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # or your email provider
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your-email@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'your-app-password')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# MEDIA_ROOT and MEDIA_URL for file uploads
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+```
+
+---
+
+## Phase 3: PDF Generation
+
+### 3.1 Install PDF Dependencies
+
+```bash
+pip install reportlab weasyprint
+```
+
+### 3.2 Create PDF Service
+
+Create `weddings/pdf_service.py`:
+
+```python
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from io import BytesIO
+from datetime import datetime
+
+class WeddingPDFGenerator:
+    @staticmethod
+    def generate_guest_list_pdf(wedding):
+        """Generate guest list PDF"""
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        title = Paragraph(
+            f"{wedding.bride_name} & {wedding.groom_name}<br/>Guest List",
+            title_style
+        )
+        elements.append(title)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Wedding Details
+        details = f"""
+        <b>Wedding Date:</b> {wedding.wedding_date.strftime('%B %d, %Y')}<br/>
+        <b>Venue:</b> {wedding.venue}<br/>
+        <b>Generated:</b> {datetime.now().strftime('%B %d, %Y %I:%M %p')}
+        """
+        elements.append(Paragraph(details, styles['Normal']))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Guest Table
+        guests = wedding.guests.all()
+        data = [['No.', 'Guest Name', 'Relationship', 'RSVP Status', 'Guests', 'Contact']]
+        
+        for i, guest in enumerate(guests, 1):
+            data.append([
+                str(i),
+                guest.name,
+                guest.get_relationship_display(),
+                guest.rsvp_status.upper(),
+                str(guest.number_of_guests),
+                guest.email or guest.phone or 'N/A'
+            ])
+        
+        table = Table(data, colWidths=[0.5*inch, 1.5*inch, 1.2*inch, 1*inch, 0.7*inch, 1.5*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ]))
+        
+        elements.append(table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Summary
+        confirmed = wedding.guests.filter(rsvp_status='confirmed').count()
+        pending = wedding.guests.filter(rsvp_status='pending').count()
+        declined = wedding.guests.filter(rsvp_status='declined').count()
+        total_guests = sum([g.number_of_guests for g in wedding.guests.all()])
+        
+        summary = f"""
+        <b>Summary:</b><br/>
+        Total Invitations: {guests.count()}<br/>
+        Confirmed: {confirmed} | Pending: {pending} | Declined: {declined}<br/>
+        Total Guest Count (with +1s): {total_guests}
+        """
+        elements.append(Paragraph(summary, styles['Normal']))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+    
+    @staticmethod
+    def generate_budget_report_pdf(wedding):
+        """Generate budget report PDF"""
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        title = Paragraph(
+            f"{wedding.bride_name} & {wedding.groom_name}<br/>Budget Report",
+            title_style
+        )
+        elements.append(title)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        budget_items = wedding.budget_items.all()
+        total_estimated = sum([float(item.estimated_cost) for item in budget_items])
+        total_actual = sum([float(item.actual_cost or 0) for item in budget_items])
+        remaining = total_estimated - total_actual
+        
+        # Summary Cards
+        summary = f"""
+        <b>Total Budget:</b> TZS {total_estimated:,.0f}<br/>
+        <b>Total Spent:</b> TZS {total_actual:,.0f}<br/>
+        <b>Remaining:</b> TZS {remaining:,.0f}<br/>
+        <b>Percentage Spent:</b> {(total_actual/total_estimated*100 if total_estimated > 0 else 0):.1f}%
+        """
+        elements.append(Paragraph(summary, styles['Normal']))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Category breakdown
+        categories = {}
+        for item in budget_items:
+            if item.category not in categories:
+                categories[item.category] = {'estimated': 0, 'actual': 0}
+            categories[item.category]['estimated'] += float(item.estimated_cost)
+            categories[item.category]['actual'] += float(item.actual_cost or 0)
+        
+        # Category table
+        cat_data = [['Category', 'Estimated', 'Actual', 'Difference']]
+        for cat, amounts in sorted(categories.items()):
+            diff = amounts['estimated'] - amounts['actual']
+            cat_data.append([
+                cat.replace('_', ' ').title(),
+                f"TZS {amounts['estimated']:,.0f}",
+                f"TZS {amounts['actual']:,.0f}",
+                f"TZS {diff:,.0f}"
+            ])
+        
+        cat_table = Table(cat_data, colWidths=[2*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+        cat_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ]))
+        
+        elements.append(cat_table)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+    
+    @staticmethod
+    def generate_timeline_pdf(wedding):
+        """Generate wedding timeline PDF"""
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        title = Paragraph(
+            f"{wedding.bride_name} & {wedding.groom_name}<br/>Wedding Timeline",
+            title_style
+        )
+        elements.append(title)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Timeline events
+        events = wedding.timeline_events.all().order_by('date')
+        
+        for event in events:
+            status = "✓ COMPLETED" if event.is_completed else "○ PENDING"
+            event_text = f"""
+            <b>{event.get_event_type_display()}</b> - {event.date.strftime('%B %d, %Y')} {status}<br/>
+            <b>{event.title}</b><br/>
+            {event.description or 'No description'}<br/>
+            {f"<b>Location:</b> {event.location}<br/>" if event.location else ""}
+            {f"<b>Time:</b> {event.time.strftime('%I:%M %p')}<br/>" if event.time else ""}
+            """
+            elements.append(Paragraph(event_text, styles['Normal']))
+            elements.append(Spacer(1, 0.2*inch))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+    
+    @staticmethod
+    def generate_vendor_list_pdf(wedding):
+        """Generate vendor list PDF"""
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        title = Paragraph(
+            f"{wedding.bride_name} & {wedding.groom_name}<br/>Vendor List",
+            title_style
+        )
+        elements.append(title)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Vendors by category
+        vendors = wedding.vendors.all()
+        categories = {}
+        for vendor in vendors:
+            cat = vendor.get_vendor_type_display()
+            if cat not in categories:
+                categories[cat] = []
+            categories[cat].append(vendor)
+        
+        for category in sorted(categories.keys()):
+            elements.append(Paragraph(f"<b>{category}</b>", styles['Heading2']))
+            elements.append(Spacer(1, 0.1*inch))
+            
+            for vendor in categories[category]:
+                vendor_text = f"""
+                <b>{vendor.business_name}</b> - Status: {vendor.get_status_display()}<br/>
+                Contact: {vendor.contact_person}<br/>
+                Phone: {vendor.phone} | Email: {vendor.email}<br/>
+                Quote: TZS {vendor.quote:,.0f if vendor.quote else 'N/A'}<br/>
+                {f"Deposit Paid: TZS {vendor.deposit_paid:,.0f}<br/>" if vendor.deposit_paid else ""}
+                {f"Final Amount: TZS {vendor.final_amount:,.0f}<br/>" if vendor.final_amount else ""}
+                {f"Notes: {vendor.notes}<br/>" if vendor.notes else ""}
+                """
+                elements.append(Paragraph(vendor_text, styles['Normal']))
+                elements.append(Spacer(1, 0.15*inch))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+    
+    @staticmethod
+    def generate_invitation_card_pdf(invitation_template, guest=None):
+        """Generate fancy invitation card PDF"""
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Fancy title style
+        title_style = ParagraphStyle(
+            'InviteTitle',
+            parent=styles['Heading1'],
+            fontSize=36,
+            textColor=colors.HexColor('#764ba2'),
+            spaceAfter=20,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        # Main title
+        elements.append(Spacer(1, 0.5*inch))
+        elements.append(Paragraph("Together with their parents<br/>request the honor of your presence<br/>at the marriage of", 
+                                 ParagraphStyle('Normal', parent=styles['Normal'], alignment=TA_CENTER)))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        elements.append(Paragraph(invitation_template.title, title_style))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Details
+        details_style = ParagraphStyle('Details', parent=styles['Normal'], alignment=TA_CENTER, fontSize=12)
+        
+        if invitation_template.ceremony_time and invitation_template.ceremony_location:
+            ceremony = f"<b>Ceremony</b><br/>{invitation_template.ceremony_time.strftime('%I:%M %p')}<br/>{invitation_template.ceremony_location}"
+            elements.append(Paragraph(ceremony, details_style))
+            elements.append(Spacer(1, 0.2*inch))
+        
+        if invitation_template.reception_time and invitation_template.reception_location:
+            reception = f"<b>Reception</b><br/>{invitation_template.reception_time.strftime('%I:%M %p')}<br/>{invitation_template.reception_location}"
+            elements.append(Paragraph(reception, details_style))
+            elements.append(Spacer(1, 0.2*inch))
+        
+        if invitation_template.dress_code:
+            elements.append(Paragraph(f"<b>Dress Code:</b> {invitation_template.dress_code}", details_style))
+            elements.append(Spacer(1, 0.2*inch))
+        
+        if invitation_template.rsvp_deadline:
+            rsvp = f"<b>RSVP by {invitation_template.rsvp_deadline.strftime('%B %d, %Y')}</b><br/>{invitation_template.rsvp_email}"
+            elements.append(Paragraph(rsvp, details_style))
+        
+        if invitation_template.custom_message:
+            elements.append(Spacer(1, 0.2*inch))
+            elements.append(Paragraph(invitation_template.custom_message, ParagraphStyle('Message', parent=styles['Normal'], alignment=TA_CENTER)))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+```
+
+### 3.3 Create PDF API Views
+
+Create `weddings/pdf_views.py`:
+
+```python
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404
+from .models import Wedding
+from .pdf_service import WeddingPDFGenerator
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_guest_list_pdf(request, wedding_id):
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    buffer = WeddingPDFGenerator.generate_guest_list_pdf(wedding)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'guest_list_{wedding.id}.pdf',
+        content_type='application/pdf'
+    )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_budget_report_pdf(request, wedding_id):
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    buffer = WeddingPDFGenerator.generate_budget_report_pdf(wedding)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'budget_report_{wedding.id}.pdf',
+        content_type='application/pdf'
+    )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_timeline_pdf(request, wedding_id):
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    buffer = WeddingPDFGenerator.generate_timeline_pdf(wedding)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'timeline_{wedding.id}.pdf',
+        content_type='application/pdf'
+    )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_vendor_list_pdf(request, wedding_id):
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    buffer = WeddingPDFGenerator.generate_vendor_list_pdf(wedding)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'vendor_list_{wedding.id}.pdf',
+        content_type='application/pdf'
+    )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_invitation_pdf(request, wedding_id):
+    from .models import InvitationTemplate
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    invitation = get_object_or_404(InvitationTemplate, wedding=wedding)
+    buffer = WeddingPDFGenerator.generate_invitation_card_pdf(invitation)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'invitation_{wedding.id}.pdf',
+        content_type='application/pdf'
+    )
+```
+
+### 3.4 Update URLs for PDF
+
+Update `weddings/urls.py` to add:
+
+```python
+from django.urls import path
+from .pdf_views import (
+    download_guest_list_pdf,
+    download_budget_report_pdf,
+    download_timeline_pdf,
+    download_vendor_list_pdf,
+    download_invitation_pdf,
+)
+
+# Add these URL patterns
+pdf_patterns = [
+    path('weddings/<int:wedding_id>/pdf/guest-list/', download_guest_list_pdf, name='pdf-guest-list'),
+    path('weddings/<int:wedding_id>/pdf/budget/', download_budget_report_pdf, name='pdf-budget'),
+    path('weddings/<int:wedding_id>/pdf/timeline/', download_timeline_pdf, name='pdf-timeline'),
+    path('weddings/<int:wedding_id>/pdf/vendors/', download_vendor_list_pdf, name='pdf-vendors'),
+    path('weddings/<int:wedding_id>/pdf/invitation/', download_invitation_pdf, name='pdf-invitation'),
+]
+```
+
+---
+
+## Phase 4: React Components for Advanced Features
+
+### 4.1 Photo Gallery Component
+
+Create `src/components/Gallery/PhotoGallery.jsx`:
+
+```javascript
+import { useState, useEffect } from 'react';
+import { galleryAPI, photoAPI } from '../../services/api';
+import { Loading } from '../Common/Loading';
+import './Gallery.css';
+
+export const PhotoGallery = ({ weddingId }) => {
+  const [galleries, setGalleries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedGallery, setSelectedGallery] = useState(null);
+  const [showNewGallery, setShowNewGallery] = useState(false);
+  const [newGalleryData, setNewGalleryData] = useState({
+    title: '',
+    album_type: 'other',
+    description: '',
+  });
+
+  useEffect(() => {
+    loadGalleries();
+  }, [weddingId]);
+
+  const loadGalleries = async () => {
+    try {
+      const response = await galleryAPI.getAll(weddingId);
+      setGalleries(response.data);
+    } catch (err) {
+      console.error('Failed to load galleries');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateGallery = async (e) => {
+    e.preventDefault();
+    try {
+      await galleryAPI.create(weddingId, newGalleryData);
+      loadGalleries();
+      setShowNewGallery(false);
+      setNewGalleryData({ title: '', album_type: 'other', description: '' });
+    } catch (err) {
+      console.error('Failed to create gallery');
+    }
+  };
+
+  const handleUploadPhoto = async (galleryId, file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('caption', file.name);
+    
+    try {
+      await photoAPI.create(weddingId, galleryId, formData);
+      loadGalleries();
+    } catch (err) {
+      console.error('Failed to upload photo');
+    }
+  };
+
+  if (loading) return <Loading />;
+
+  return (
+    <div className="photo-gallery">
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <h2>📸 Photo Gallery</h2>
+        <button className="primary" onClick={() => setShowNewGallery(!showNewGallery)}>
+          {showNewGallery ? '✕ Cancel' : '+ New Album'}
+        </button>
+      </div>
+
+      {showNewGallery && (
+        <form onSubmit={handleCreateGallery} className="card">
+          <div className="form-group">
+            <label>Album Title</label>
+            <input
+              type="text"
+              value={newGalleryData.title}
+              onChange={(e) => setNewGalleryData({ ...newGalleryData, title: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Album Type</label>
+            <select
+              value={newGalleryData.album_type}
+              onChange={(e) => setNewGalleryData({ ...newGalleryData, album_type: e.target.value })}
+            >
+              <option value="pre_wedding">Pre-Wedding</option>
+              <option value="ceremony">Ceremony</option>
+              <option value="reception">Reception</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <button type="submit" className="primary">Create Album</button>
+        </form>
+      )}
+
+      <div className="gallery-grid">
+        {galleries.map(gallery => (
+          <div key={gallery.id} className="gallery-album card">
+            <h3>{gallery.title}</h3>
+            <p className="album-type">{gallery.album_type}</p>
+            <p className="photo-count">📷 {gallery.photos.length} photos</p>
+            
+            <div className="album-preview">
+              {gallery.photos.slice(0, 4).map(photo => (
+                <img key={photo.id} src={photo.image} alt={photo.caption} />
+              ))}
+            </div>
+            
+            <label className="upload-btn">
+              📸 Add Photos
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  Array.from(e.target.files).forEach(file => {
+                    handleUploadPhoto(gallery.id, file);
+                  });
+                }}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Create src/components/Gallery/Gallery.css
+```
+
+Create `src/components/Gallery/Gallery.css`:
+
+```css
+.photo-gallery {
+  padding: 20px 0;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.gallery-album {
+  border: 1px solid #e5e7eb;
+  transition: transform 0.3s;
+}
+
+.gallery-album:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.gallery-album h3 {
+  color: #1f2937;
+  margin-bottom: 10px;
+}
+
+.album-type {
+  color: #6b7280;
+  font-size: 0.875rem;
+  text-transform: capitalize;
+}
+
+.photo-count {
+  color: #3b82f6;
+  font-weight: 600;
+  margin: 10px 0;
+}
+
+.album-preview {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 15px 0;
+  max-height: 200px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.album-preview img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.upload-btn {
+  display: block;
+  background-color: #3b82f6;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.upload-btn:hover {
+  background-color: #2563eb;
+}
+```
+
+### 4.2 Timeline Component
+
+Create `src/components/Timeline/Timeline.jsx`:
+
+```javascript
+import { useState, useEffect } from 'react';
+import { timelineAPI } from '../../services/api';
+import { Loading } from '../Common/Loading';
+import './Timeline.css';
+
+export const Timeline = ({ weddingId }) => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    event_type: 'other',
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    location: '',
+  });
+
+  useEffect(() => {
+    loadEvents();
+  }, [weddingId]);
+
+  const loadEvents = async () => {
+    try {
+      const response = await timelineAPI.getAll(weddingId);
+      setEvents(response.data);
+    } catch (err) {
+      console.error('Failed to load timeline');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await timelineAPI.create(weddingId, formData);
+      loadEvents();
+      setShowForm(false);
+      setFormData({ event_type: 'other', title: '', description: '', date: '', time: '', location: '' });
+    } catch (err) {
+      console.error('Failed to create event');
+    }
+  };
+
+  const handleToggleComplete = async (eventId, isCompleted) => {
+    try {
+      await timelineAPI.toggleCompleted(weddingId, eventId);
+      loadEvents();
+    } catch (err) {
+      console.error('Failed to update event');
+    }
+  };
+
+  if (loading) return <Loading />;
+
+  return (
+    <div className="timeline-container">
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <h2>📅 Wedding Timeline</h2>
+        <button className="primary" onClick={() => setShowForm(!showForm)}>
+          {showForm ? '✕ Cancel' : '+ Add Event'}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="card timeline-form">
+          <div className="form-row">
+            <div className="form-group">
+              <label>Event Type</label>
+              <select value={formData.event_type} onChange={(e) => setFormData({ ...formData, event_type: e.target.value })}>
+                <option value="save_date">Save the Date</option>
+                <option value="invitation">Send Invitations</option>
+                <option value="rsvp_deadline">RSVP Deadline</option>
+                <option value="final_headcount">Final Headcount</option>
+                <option value="ceremony_rehearsal">Ceremony Rehearsal</option>
+                <option value="wedding_day">Wedding Day</option>
+                <option value="honeymoon">Honeymoon</option>
+                <option value="thank_you">Send Thank You Cards</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Title</label>
+              <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Description</label>
+            <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Date</label>
+              <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
+            </div>
+            <div className="form-group">
+              <label>Time</label>
+              <input type="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })} />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Location</label>
+            <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
+          </div>
+
+          <button type="submit" className="primary">Add Event</button>
+        </form>
+      )}
+
+      <div className="timeline-vertical">
+        {events.map((event, index) => (
+          <div key={event.id} className={`timeline-event ${event.is_completed ? 'completed' : ''}`}>
+            <div className="timeline-marker">
+              <input
+                type="checkbox"
+                checked={event.is_completed}
+                onChange={(e) => handleToggleComplete(event.id, !event.is_completed)}
+              />
+            </div>
+            <div className="timeline-content card">
+              <h3>{event.title}</h3>
+              <p className="event-type">{event.event_type.replace('_', ' ').toUpperCase()}</p>
+              <p className="event-date">📅 {new Date(event.date).toLocaleDateString()}</p>
+              {event.time && <p>🕐 {event.time}</p>}
+              {event.location && <p>📍 {event.location}</p>}
+              {event.description && <p>{event.description}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+Create `src/components/Timeline/Timeline.css`:
+
+```css
+.timeline-container {
+  padding: 20px 0;
+}
+
+.timeline-form {
+  margin-bottom: 30px;
+  border: 2px solid #fef3c7;
+}
+
+.timeline-vertical {
+  position: relative;
+  padding: 20px 0 20px 50px;
+}
+
+.timeline-vertical::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #667eea, #764ba2);
+}
+
+.timeline-event {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.timeline-event.completed .timeline-marker {
+  background-color: #10b981;
+}
+
+.timeline-event.completed .timeline-content {
+  opacity: 0.6;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -45px;
+  top: 10px;
+  width: 30px;
+  height: 30px;
+  background: white;
+  border: 3px solid #667eea;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.timeline-marker input {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.timeline-content {
+  margin: 0;
+  border-left: 4px solid #667eea;
+}
+
+.timeline-content h3 {
+  margin: 0 0 10px 0;
+  color: #1f2937;
+}
+
+.event-type {
+  display: inline-block;
+  background-color: #f0f9ff;
+  color: #1e40af;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-bottom: 10px;
+}
+
+.event-date, .timeline-content p {
+  margin: 8px 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+---
+
+### 4.3 Vendor Management Component
+
+Create `src/components/Vendors/VendorList.jsx`:
+
+```javascript
+import { useState, useEffect } from 'react';
+import { vendorAPI } from '../../services/api';
+import { VendorForm } from './VendorForm';
+import { Loading } from '../Common/Loading';
+import './Vendors.css';
+
+export const VendorList = ({ weddingId }) => {
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingVendor, setEditingVendor] = useState(null);
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    loadVendors();
+  }, [weddingId]);
+
+  const loadVendors = async () => {
+    try {
+      const response = await vendorAPI.getAll(weddingId);
+      setVendors(response.data);
+    } catch (err) {
+      console.error('Failed to load vendors');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (vendorId) => {
+    if (window.confirm('Delete this vendor?')) {
+      try {
+        await vendorAPI.delete(weddingId, vendorId);
+        setVendors(vendors.filter(v => v.id !== vendorId));
+      } catch (err) {
+        console.error('Failed to delete vendor');
+      }
+    }
+  };
+
+  const handleSave = () => {
+    loadVendors();
+    setShowForm(false);
+    setEditingVendor(null);
+  };
+
+  if (loading) return <Loading />;
+
+  const vendorTypes = [...new Set(vendors.map(v => v.vendor_type))];
+  const statuses = {
+    inquiry: vendors.filter(v => v.status === 'inquiry').length,
+    negotiating: vendors.filter(v => v.status === 'negotiating').length,
+    booked: vendors.filter(v => v.status === 'booked').length,
+    completed: vendors.filter(v => v.status === 'completed').length,
+  };
+
+  const filteredVendors = vendors.filter(v => 
+    filter === 'all' ? true : v.status === filter
+  );
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>💼 Vendor Management</h2>
+        <button className="primary" onClick={() => setShowForm(!showForm)}>
+          {showForm ? '✕ Cancel' : '+ Add Vendor'}
+        </button>
+      </div>
+
+      {showForm && (
+        <VendorForm 
+          weddingId={weddingId}
+          vendor={editingVendor}
+          onSave={handleSave}
+          onCancel={() => { setShowForm(false); setEditingVendor(null); }}
+        />
+      )}
+
+      <div className="vendor-filters">
+        <button 
+          className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+          onClick={() => setFilter('all')}
+        >
+          All ({vendors.length})
+        </button>
+        <button 
+          className={`filter-btn ${filter === 'inquiry' ? 'active' : ''}`}
+          onClick={() => setFilter('inquiry')}
+        >
+          Inquiry ({statuses.inquiry})
+        </button>
+        <button 
+          className={`filter-btn ${filter === 'negotiating' ? 'active' : ''}`}
+          onClick={() => setFilter('negotiating')}
+        >
+          Negotiating ({statuses.negotiating})
+        </button>
+        <button 
+          className={`filter-btn ${filter === 'booked' ? 'active' : ''}`}
+          onClick={() => setFilter('booked')}
+        >
+          Booked ({statuses.booked})
+        </button>
+        <button 
+          className={`filter-btn ${filter === 'completed' ? 'active' : ''}`}
+          onClick={() => setFilter('completed')}
+        >
+          Completed ({statuses.completed})
+        </button>
+      </div>
+
+      {filteredVendors.length === 0 ? (
+        <div className="empty-state">
+          <p>No vendors found</p>
+        </div>
+      ) : (
+        <div className="vendors-grid">
+          {filteredVendors.map(vendor => (
+            <div key={vendor.id} className="vendor-card card">
+              <div className="vendor-header">
+                <div>
+                  <h3>{vendor.business_name}</h3>
+                  <p className="vendor-type">{vendor.vendor_type.replace('_', ' ')}</p>
+                </div>
+                <span className={`status-badge ${vendor.status}`}>
+                  {vendor.status}
+                </span>
+              </div>
+
+              <div className="vendor-contact">
+                <p><strong>Contact:</strong> {vendor.contact_person}</p>
+                <p>📱 {vendor.phone}</p>
+                <p>✉️ {vendor.email}</p>
+                {vendor.website && <p><a href={vendor.website} target="_blank" rel="noopener noreferrer">🌐 Website</a></p>}
+              </div>
+
+              <div className="vendor-pricing">
+                {vendor.quote && <p>Quote: TZS {vendor.quote.toLocaleString()}</p>}
+                {vendor.deposit_paid && <p>Deposit: TZS {vendor.deposit_paid.toLocaleString()}</p>}
+                {vendor.final_amount && <p>Final: TZS {vendor.final_amount.toLocaleString()}</p>}
+                {vendor.remaining_amount && <p className="remaining">Remaining: TZS {vendor.remaining_amount.toLocaleString()}</p>}
+              </div>
+
+              {vendor.notes && <p className="vendor-notes"><strong>Notes:</strong> {vendor.notes}</p>}
+
+              <div className="vendor-actions">
+                <button 
+                  className="secondary" 
+                  onClick={() => { setEditingVendor(vendor); setShowForm(true); }}
+                >
+                  Edit
+                </button>
+                <button 
+                  className="danger" 
+                  onClick={() => handleDelete(vendor.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+Create `src/components/Vendors/VendorForm.jsx`:
+
+```javascript
+import { useState, useEffect } from 'react';
+import { vendorAPI } from '../../services/api';
+import './Vendors.css';
+
+export const VendorForm = ({ weddingId, vendor, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    vendor_type: 'other',
+    business_name: '',
+    contact_person: '',
+    phone: '',
+    email: '',
+    website: '',
+    quote: '',
+    deposit_paid: '',
+    final_amount: '',
+    status: 'inquiry',
+    notes: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const vendorTypes = [
+    'venue', 'catering', 'photography', 'videography', 'flowers',
+    'music', 'transportation', 'accommodation', 'invitation', 'makeup',
+    'wedding_planner', 'other'
+  ];
+
+  useEffect(() => {
+    if (vendor) {
+      setFormData(vendor);
+    }
+  }, [vendor]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (vendor) {
+        await vendorAPI.update(weddingId, vendor.id, formData);
+      } else {
+        await vendorAPI.create(weddingId, formData);
+      }
+      onSave();
+    } catch (err) {
+      console.error('Failed to save vendor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="card vendor-form">
+      <h3>{vendor ? 'Edit Vendor' : 'Add New Vendor'}</h3>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Vendor Type *</label>
+          <select name="vendor_type" value={formData.vendor_type} onChange={handleChange} required>
+            {vendorTypes.map(type => (
+              <option key={type} value={type}>
+                {type.replace('_', ' ').toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Business Name *</label>
+          <input
+            type="text"
+            name="business_name"
+            value={formData.business_name}
+            onChange={handleChange}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Contact Person *</label>
+          <input
+            type="text"
+            name="contact_person"
+            value={formData.contact_person}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label>Phone *</label>
+          <input
+            type="tel"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Email *</label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label>Website</label>
+          <input
+            type="url"
+            name="website"
+            value={formData.website}
+            onChange={handleChange}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Quote (TZS)</label>
+          <input
+            type="number"
+            name="quote"
+            value={formData.quote}
+            onChange={handleChange}
+            step="1000"
+          />
+        </div>
+        <div className="form-group">
+          <label>Deposit Paid (TZS)</label>
+          <input
+            type="number"
+            name="deposit_paid"
+            value={formData.deposit_paid}
+            onChange={handleChange}
+            step="1000"
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Final Amount (TZS)</label>
+          <input
+            type="number"
+            name="final_amount"
+            value={formData.final_amount}
+            onChange={handleChange}
+            step="1000"
+          />
+        </div>
+        <div className="form-group">
+          <label>Status</label>
+          <select name="status" value={formData.status} onChange={handleChange}>
+            <option value="inquiry">Inquiry</option>
+            <option value="negotiating">Negotiating</option>
+            <option value="booked">Booked</option>
+            <option value="completed">Completed</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label>Notes</label>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          rows="3"
+          placeholder="Add any notes about this vendor..."
+        />
+      </div>
+
+      <div className="form-actions">
+        <button type="submit" className="primary" disabled={loading}>
+          {loading ? 'Saving...' : 'Save Vendor'}
+        </button>
+        <button type="button" className="secondary" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+};
+```
+
+Create `src/components/Vendors/Vendors.css`:
+
+```css
+.vendor-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 10px 15px;
+  background-color: #e5e7eb;
+  color: #1f2937;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.filter-btn.active {
+  background-color: #667eea;
+  color: white;
+}
+
+.filter-btn:hover {
+  background-color: #667eea;
+  color: white;
+}
+
+.vendors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.vendor-card {
+  border-left: 4px solid #667eea;
+}
+
+.vendor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.vendor-header h3 {
+  margin: 0;
+  color: #1f2937;
+}
+
+.vendor-type {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 5px 0 0 0;
+  text-transform: capitalize;
+}
+
+.status-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge.inquiry {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.negotiating {
+  background-color: #fef08a;
+  color: #713f12;
+}
+
+.status-badge.booked {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.completed {
+  background-color: #d1d5db;
+  color: #374151;
+}
+
+.vendor-contact {
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
+
+.vendor-contact p {
+  margin: 5px 0;
+  color: #6b7280;
+}
+
+.vendor-contact a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.vendor-pricing {
+  background-color: #f0f9ff;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
+
+.vendor-pricing p {
+  margin: 5px 0;
+  color: #1f2937;
+}
+
+.remaining {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.vendor-notes {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  font-style: italic;
+}
+
+.vendor-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.vendor-actions button {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+}
+
+.vendor-form {
+  margin-bottom: 30px;
+  border: 2px solid #f3e8ff;
+}
+
+.vendor-form h3 {
+  margin-bottom: 20px;
+  color: #1f2937;
+}
+
+---
+
+### 4.4 PDF Download Buttons Component
+
+Create `src/components/Reports/PDFDownloads.jsx`:
+
+```javascript
+import { api } from '../../services/api';
+import './Reports.css';
+
+export const PDFDownloads = ({ weddingId }) => {
+  const handleDownload = async (endpoint, filename) => {
+    try {
+      const response = await api.get(endpoint, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentChild.removeChild(link);
+    } catch (err) {
+      console.error('Failed to download PDF');
+    }
+  };
+
+  return (
+    <div className="pdf-downloads card">
+      <h3>📄 Download Reports</h3>
+      <p>Export your wedding information as PDF documents</p>
+      
+      <div className="pdf-buttons">
+        <button 
+          className="primary" 
+          onClick={() => handleDownload(
+            `/weddings/${weddingId}/pdf/guest-list/`,
+            'guest-list.pdf'
+          )}
+        >
+          📋 Guest List
+        </button>
+        <button 
+          className="primary" 
+          onClick={() => handleDownload(
+            `/weddings/${weddingId}/pdf/budget/`,
+            'budget-report.pdf'
+          )}
+        >
+          💰 Budget Report
+        </button>
+        <button 
+          className="primary" 
+          onClick={() => handleDownload(
+            `/weddings/${weddingId}/pdf/timeline/`,
+            'timeline.pdf'
+          )}
+        >
+          📅 Timeline
+        </button>
+        <button 
+          className="primary" 
+          onClick={() => handleDownload(
+            `/weddings/${weddingId}/pdf/vendors/`,
+            'vendor-list.pdf'
+          )}
+        >
+          💼 Vendor List
+        </button>
+        <button 
+          className="primary" 
+          onClick={() => handleDownload(
+            `/weddings/${weddingId}/pdf/invitation/`,
+            'invitation.pdf'
+          )}
+        >
+          💌 Invitation Card
+        </button>
+      </div>
+    </div>
+  );
+};
+```
+
+Create `src/components/Reports/Reports.css`:
+
+```css
+.pdf-downloads {
+  background: linear-gradient(135deg, #f5f3ff 0%, #f0f9ff 100%);
+  border: 2px dashed #667eea;
+  margin-bottom: 30px;
+}
+
+.pdf-downloads h3 {
+  color: #667eea;
+  margin-bottom: 10px;
+}
+
+.pdf-downloads p {
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.pdf-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.pdf-buttons button {
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+```
+
+---
+
+## Phase 5: Email Configuration
+
+### 5.1 Set Up Environment Variables
+
+Create `.env` file in `harusi_backend`:
+
+```
+DEBUG=True
+SECRET_KEY=your-secret-key-here
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Email Settings
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
+DEFAULT_FROM_EMAIL=your-email@gmail.com
+```
+
+### 5.2 Update Django Settings
+
+Add to `harusi_backend/settings.py`:
+
+```python
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# Media Files
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+```
+
+### 5.3 Add Email API Endpoints
+
+Update `weddings/urls.py`:
+
+```python
+from django.urls import path
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .email_service import WeddingEmailService
+from .models import Guest, InvitationTemplate, Vendor
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_rsvp_reminders(request, wedding_id):
+    from .models import Wedding
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    guests = wedding.guests.filter(rsvp_status='pending')
+    
+    count = 0
+    for guest in guests:
+        if WeddingEmailService.send_rsvp_reminder(guest):
+            count += 1
+    
+    return Response({'sent': count, 'total': guests.count()})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_invitations(request, wedding_id):
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    invitation = get_object_or_404(InvitationTemplate, wedding=wedding)
+    guests = wedding.guests.all()
+    
+    count = 0
+    for guest in guests:
+        if WeddingEmailService.send_invitation_email(guest, invitation):
+            count += 1
+    
+    return Response({'sent': count, 'total': guests.count()})
+
+# Add these to urlpatterns
+email_patterns = [
+    path('weddings/<int:wedding_id>/email/rsvp-reminders/', send_rsvp_reminders, name='send-rsvp'),
+    path('weddings/<int:wedding_id>/email/send-invitations/', send_invitations, name='send-invitations'),
+]
+```
+
+---
+
+## Phase 6: Update Main Wedding Detail Component
+
+Update `WeddingDetail.jsx` to include new tabs:
+
+```javascript
+// Add these tabs after the existing tabs
+<button 
+  className={`tab-button ${activeTab === 'gallery' ? 'active' : ''}`}
+  onClick={() => setActiveTab('gallery')}
+>
+  Gallery
+</button>
+<button 
+  className={`tab-button ${activeTab === 'timeline' ? 'active' : ''}`}
+  onClick={() => setActiveTab('timeline')}
+>
+  Timeline
+</button>
+<button 
+  className={`tab-button ${activeTab === 'vendors' ? 'active' : ''}`}
+  onClick={() => setActiveTab('vendors')}
+>
+  Vendors
+</button>
+<button 
+  className={`tab-button ${activeTab === 'reports' ? 'active' : ''}`}
+  onClick={() => setActiveTab('reports')}
+>
+  Reports
+</button>
+
+// Add these tab contents
+<div className={`tab-content ${activeTab === 'gallery' ? 'active' : ''}`}>
+  <PhotoGallery weddingId={id} />
+</div>
+
+<div className={`tab-content ${activeTab === 'timeline' ? 'active' : ''}`}>
+  <Timeline weddingId={id} />
+</div>
+
+<div className={`tab-content ${activeTab === 'vendors' ? 'active' : ''}`}>
+  <VendorList weddingId={id} />
+</div>
+
+<div className={`tab-content ${activeTab === 'reports' ? 'active' : ''}`}>
+  <PDFDownloads weddingId={id} />
+</div>
+```
+
+---
+
+## Phase 7: Run Migrations for New Models
+
+```bash
+cd harusi_backend
+python manage.py makemigrations
+python manage.py migrate
+```
+
+---
+
+## Phase 8: Complete Setup Summary
+
+### Backend Features Added:
+✅ Photo Gallery System
+✅ Wedding Timeline
+✅ Vendor Management
+✅ Email Notifications
+✅ PDF Report Generation
+✅ Invitation Templates
+
+### Frontend Features Added:
+✅ Photo Gallery Component
+✅ Timeline Visualization
+✅ Vendor Management UI
+✅ PDF Download Buttons
+✅ Email Sending Integration
+
+### Email Capabilities:
+✅ RSVP Reminders
+✅ Task Reminders
+✅ Wedding Invitations
+✅ Vendor Reminders
+✅ Wedding Countdown
+
+### PDF Reports:
+✅ Guest List
+✅ Budget Report
+✅ Wedding Timeline
+✅ Vendor List
+✅ Invitation Cards
+
+---
+
+## Final Testing Checklist
+
+- [ ] Upload photos to galleries
+- [ ] Create timeline events
+- [ ] Add and manage vendors
+- [ ] Download PDF reports
+- [ ] Send email invitations
+- [ ] Send RSVP reminders
+- [ ] Test all filters and searches
+- [ ] Verify responsive design
+- [ ] Check error handling
+
+---
+
+## Deployment Notes
+
+Before deploying to production:
+1. Set DEBUG=False in .env
+2. Configure EMAIL credentials properly
+3. Set ALLOWED_HOSTS to your domain
+4. Create superuser: `python manage.py createsuperuser`
+5. Collect static files: `python manage.py collectstatic`
+6. Use proper database (PostgreSQL recommended)
+7. Set up file storage for media uploads
+8. Configure HTTPS
+
+Your Harusi Wedding Management System is now feature-complete! 🎉

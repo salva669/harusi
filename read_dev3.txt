@@ -1,0 +1,1743 @@
+# Harusi Wedding Management System - Advanced Analytics & Reports
+## Comprehensive Dashboard with Data Visualizations
+
+---
+
+## Phase 1: Backend Analytics Models & Views
+
+### 1.1 Create Analytics Models
+
+Create `weddings/analytics_models.py`:
+
+```python
+from django.db import models
+from django.contrib.auth.models import User
+from .models import Wedding, Guest, Task, Vendor, Budget
+
+class WeddingAnalytics(models.Model):
+    """Store aggregated analytics data for weddings"""
+    wedding = models.OneToOneField(Wedding, on_delete=models.CASCADE, related_name='analytics')
+    
+    # Guest Analytics
+    total_invitations_sent = models.IntegerField(default=0)
+    total_confirmed = models.IntegerField(default=0)
+    total_pending = models.IntegerField(default=0)
+    total_declined = models.IntegerField(default=0)
+    average_guests_per_invitation = models.FloatField(default=1.0)
+    
+    # Budget Analytics
+    total_estimated_budget = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_actual_spending = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    budget_variance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    budget_category_breakdown = models.JSONField(default=dict)
+    
+    # Task Analytics
+    total_tasks = models.IntegerField(default=0)
+    completed_tasks = models.IntegerField(default=0)
+    pending_tasks = models.IntegerField(default=0)
+    overdue_tasks = models.IntegerField(default=0)
+    completion_percentage = models.FloatField(default=0)
+    
+    # Vendor Analytics
+    total_vendors = models.IntegerField(default=0)
+    vendors_booked = models.IntegerField(default=0)
+    average_vendor_quote = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_vendor_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    # Timeline Analytics
+    days_until_wedding = models.IntegerField(default=0)
+    weeks_until_wedding = models.IntegerField(default=0)
+    completion_by_milestone = models.JSONField(default=dict)
+    
+    # Performance Metrics
+    planning_health_score = models.FloatField(default=0)  # 0-100
+    budget_health_score = models.FloatField(default=0)    # 0-100
+    task_health_score = models.FloatField(default=0)      # 0-100
+    guest_health_score = models.FloatField(default=0)     # 0-100
+    overall_health_score = models.FloatField(default=0)   # 0-100
+    
+    last_updated = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Analytics - {self.wedding}"
+
+
+class WeeklyAnalyticsSnapshot(models.Model):
+    """Store weekly snapshots for trend analysis"""
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='weekly_snapshots')
+    
+    week_number = models.IntegerField()
+    confirmed_count = models.IntegerField()
+    pending_count = models.IntegerField()
+    spending_to_date = models.DecimalField(max_digits=12, decimal_places=2)
+    tasks_completed = models.IntegerField()
+    tasks_pending = models.IntegerField()
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['week_number']
+    
+    def __str__(self):
+        return f"Week {self.week_number} - {self.wedding}"
+
+
+class GuestEngagementMetrics(models.Model):
+    """Track guest engagement patterns"""
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='engagement_metrics')
+    
+    rsvp_response_rate = models.FloatField(default=0)  # percentage
+    average_response_time = models.IntegerField(default=0)  # days
+    relationship_breakdown = models.JSONField(default=dict)  # {family: count, friend: count}
+    dietary_requirements_percentage = models.FloatField(default=0)
+    group_size_distribution = models.JSONField(default=dict)  # {1: count, 2: count, etc}
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Engagement - {self.wedding}"
+```
+
+### 1.2 Create Analytics Service
+
+Create `weddings/analytics_service.py`:
+
+```python
+from datetime import datetime, date, timedelta
+from django.utils import timezone
+from decimal import Decimal
+from .models import (
+    Wedding, Guest, Task, Vendor, Budget, 
+    WeddingAnalytics, WeeklyAnalyticsSnapshot, GuestEngagementMetrics
+)
+
+class WeddingAnalyticsService:
+    
+    @staticmethod
+    def calculate_analytics(wedding):
+        """Calculate all analytics for a wedding"""
+        analytics, created = WeddingAnalytics.objects.get_or_create(wedding=wedding)
+        
+        # Calculate guest analytics
+        WeddingAnalyticsService._calculate_guest_analytics(wedding, analytics)
+        
+        # Calculate budget analytics
+        WeddingAnalyticsService._calculate_budget_analytics(wedding, analytics)
+        
+        # Calculate task analytics
+        WeddingAnalyticsService._calculate_task_analytics(wedding, analytics)
+        
+        # Calculate vendor analytics
+        WeddingAnalyticsService._calculate_vendor_analytics(wedding, analytics)
+        
+        # Calculate timeline analytics
+        WeddingAnalyticsService._calculate_timeline_analytics(wedding, analytics)
+        
+        # Calculate health scores
+        WeddingAnalyticsService._calculate_health_scores(analytics)
+        
+        analytics.save()
+        return analytics
+    
+    @staticmethod
+    def _calculate_guest_analytics(wedding, analytics):
+        """Calculate guest-related metrics"""
+        guests = wedding.guests.all()
+        
+        analytics.total_invitations_sent = guests.count()
+        analytics.total_confirmed = guests.filter(rsvp_status='confirmed').count()
+        analytics.total_pending = guests.filter(rsvp_status='pending').count()
+        analytics.total_declined = guests.filter(rsvp_status='declined').count()
+        
+        if guests.count() > 0:
+            analytics.average_guests_per_invitation = guests.aggregate(
+                avg=models.Avg('number_of_guests')
+            )['avg'] or 1.0
+    
+    @staticmethod
+    def _calculate_budget_analytics(wedding, analytics):
+        """Calculate budget-related metrics"""
+        budget_items = wedding.budget_items.all()
+        
+        analytics.total_estimated_budget = sum([
+            Decimal(item.estimated_cost) for item in budget_items
+        ]) or Decimal(0)
+        
+        analytics.total_actual_spending = sum([
+            Decimal(item.actual_cost or 0) for item in budget_items
+        ]) or Decimal(0)
+        
+        analytics.budget_variance = (
+            analytics.total_actual_spending - analytics.total_estimated_budget
+        )
+        
+        # Category breakdown
+        category_breakdown = {}
+        for item in budget_items:
+            if item.category not in category_breakdown:
+                category_breakdown[item.category] = {
+                    'estimated': 0,
+                    'actual': 0,
+                    'count': 0
+                }
+            category_breakdown[item.category]['estimated'] += float(item.estimated_cost)
+            category_breakdown[item.category]['actual'] += float(item.actual_cost or 0)
+            category_breakdown[item.category]['count'] += 1
+        
+        analytics.budget_category_breakdown = category_breakdown
+    
+    @staticmethod
+    def _calculate_task_analytics(wedding, analytics):
+        """Calculate task-related metrics"""
+        tasks = wedding.tasks.all()
+        
+        analytics.total_tasks = tasks.count()
+        analytics.completed_tasks = tasks.filter(status='done').count()
+        analytics.pending_tasks = tasks.filter(status__in=['todo', 'in_progress']).count()
+        
+        # Calculate overdue tasks
+        today = date.today()
+        overdue_tasks = tasks.filter(
+            due_date__lt=today,
+            status__in=['todo', 'in_progress']
+        ).count()
+        analytics.overdue_tasks = overdue_tasks
+        
+        if analytics.total_tasks > 0:
+            analytics.completion_percentage = (
+                analytics.completed_tasks / analytics.total_tasks * 100
+            )
+    
+    @staticmethod
+    def _calculate_vendor_analytics(wedding, analytics):
+        """Calculate vendor-related metrics"""
+        vendors = wedding.vendors.all()
+        
+        analytics.total_vendors = vendors.count()
+        analytics.vendors_booked = vendors.filter(status='booked').count()
+        
+        quotes = [float(v.quote) for v in vendors if v.quote]
+        if quotes:
+            analytics.average_vendor_quote = Decimal(sum(quotes) / len(quotes))
+        
+        analytics.total_vendor_cost = sum([
+            Decimal(v.final_amount or v.quote or 0) for v in vendors
+        ]) or Decimal(0)
+    
+    @staticmethod
+    def _calculate_timeline_analytics(wedding, analytics):
+        """Calculate timeline-related metrics"""
+        today = date.today()
+        wedding_date = wedding.wedding_date
+        
+        days_until = (wedding_date - today).days
+        analytics.days_until_wedding = max(days_until, 0)
+        analytics.weeks_until_wedding = analytics.days_until_wedding // 7
+        
+        # Calculate completion by milestone
+        events = wedding.timeline_events.all().order_by('date')
+        milestone_completion = {}
+        for event in events:
+            milestone_completion[event.get_event_type_display()] = {
+                'completed': event.is_completed,
+                'date': event.date.isoformat(),
+                'days_until': (event.date - today).days
+            }
+        analytics.completion_by_milestone = milestone_completion
+    
+    @staticmethod
+    def _calculate_health_scores(analytics):
+        """Calculate health scores (0-100)"""
+        
+        # Budget health: 100 if under budget, decrease as overspend increases
+        if analytics.total_estimated_budget > 0:
+            budget_ratio = float(analytics.total_actual_spending) / float(analytics.total_estimated_budget)
+            analytics.budget_health_score = max(0, 100 - (budget_ratio - 1) * 100)
+        else:
+            analytics.budget_health_score = 100
+        
+        # Task health: based on completion and overdue tasks
+        if analytics.total_tasks > 0:
+            completion_score = analytics.completion_percentage
+            overdue_penalty = (analytics.overdue_tasks / analytics.total_tasks) * 20
+            analytics.task_health_score = max(0, completion_score - overdue_penalty)
+        else:
+            analytics.task_health_score = 100
+        
+        # Guest health: based on RSVP response rate
+        if analytics.total_invitations_sent > 0:
+            response_rate = (analytics.total_confirmed + analytics.total_declined) / analytics.total_invitations_sent * 100
+            analytics.guest_health_score = response_rate
+        else:
+            analytics.guest_health_score = 100
+        
+        # Planning health: based on completion by milestone
+        if analytics.completion_by_milestone:
+            completed = sum(1 for m in analytics.completion_by_milestone.values() if m.get('completed'))
+            analytics.planning_health_score = (completed / len(analytics.completion_by_milestone)) * 100
+        else:
+            analytics.planning_health_score = 100
+        
+        # Overall health: average of all scores
+        analytics.overall_health_score = (
+            analytics.budget_health_score +
+            analytics.task_health_score +
+            analytics.guest_health_score +
+            analytics.planning_health_score
+        ) / 4
+    
+    @staticmethod
+    def create_weekly_snapshot(wedding):
+        """Create a weekly analytics snapshot"""
+        from datetime import datetime
+        week_number = datetime.now().isocalendar()[1]
+        
+        confirmed = wedding.guests.filter(rsvp_status='confirmed').count()
+        pending = wedding.guests.filter(rsvp_status='pending').count()
+        
+        spending = sum([
+            float(item.actual_cost or 0) 
+            for item in wedding.budget_items.all()
+        ])
+        
+        tasks_completed = wedding.tasks.filter(status='done').count()
+        tasks_pending = wedding.tasks.filter(status__in=['todo', 'in_progress']).count()
+        
+        snapshot = WeeklyAnalyticsSnapshot.objects.create(
+            wedding=wedding,
+            week_number=week_number,
+            confirmed_count=confirmed,
+            pending_count=pending,
+            spending_to_date=Decimal(str(spending)),
+            tasks_completed=tasks_completed,
+            tasks_pending=tasks_pending
+        )
+        
+        return snapshot
+    
+    @staticmethod
+    def calculate_engagement_metrics(wedding):
+        """Calculate guest engagement metrics"""
+        guests = wedding.guests.all()
+        
+        # RSVP Response rate
+        responded = guests.exclude(rsvp_status='pending').count()
+        response_rate = (responded / guests.count() * 100) if guests.count() > 0 else 0
+        
+        # Relationship breakdown
+        relationship_breakdown = {}
+        for rel in ['family', 'friend', 'colleague', 'other']:
+            count = guests.filter(relationship=rel).count()
+            relationship_breakdown[rel] = count
+        
+        # Dietary requirements
+        dietary_count = guests.exclude(dietary_restrictions='').count()
+        dietary_percentage = (dietary_count / guests.count() * 100) if guests.count() > 0 else 0
+        
+        # Group size distribution
+        group_distribution = {}
+        for guest in guests:
+            size = guest.number_of_guests
+            if size not in group_distribution:
+                group_distribution[size] = 0
+            group_distribution[size] += 1
+        
+        metrics, created = GuestEngagementMetrics.objects.get_or_create(wedding=wedding)
+        metrics.rsvp_response_rate = response_rate
+        metrics.relationship_breakdown = relationship_breakdown
+        metrics.dietary_requirements_percentage = dietary_percentage
+        metrics.group_size_distribution = group_distribution
+        metrics.save()
+        
+        return metrics
+    
+    @staticmethod
+    def get_comparison_data(wedding):
+        """Get data comparing actual vs estimated"""
+        return {
+            'budget': {
+                'estimated': float(wedding.analytics.total_estimated_budget),
+                'actual': float(wedding.analytics.total_actual_spending),
+                'variance': float(wedding.analytics.budget_variance)
+            },
+            'guests': {
+                'invited': wedding.analytics.total_invitations_sent,
+                'confirmed': wedding.analytics.total_confirmed,
+                'pending': wedding.analytics.total_pending,
+                'declined': wedding.analytics.total_declined
+            },
+            'tasks': {
+                'total': wedding.analytics.total_tasks,
+                'completed': wedding.analytics.completed_tasks,
+                'pending': wedding.analytics.pending_tasks,
+                'overdue': wedding.analytics.overdue_tasks,
+                'completion_percentage': wedding.analytics.completion_percentage
+            }
+        }
+```
+
+### 1.3 Create Analytics Serializers
+
+Create `weddings/analytics_serializers.py`:
+
+```python
+from rest_framework import serializers
+from .analytics_models import (
+    WeddingAnalytics, WeeklyAnalyticsSnapshot, GuestEngagementMetrics
+)
+
+class WeddingAnalyticsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WeddingAnalytics
+        fields = '__all__'
+
+
+class WeeklyAnalyticsSnapshotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WeeklyAnalyticsSnapshot
+        fields = '__all__'
+
+
+class GuestEngagementMetricsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GuestEngagementMetrics
+        fields = '__all__'
+```
+
+### 1.4 Create Analytics API Views
+
+Create `weddings/analytics_views.py`:
+
+```python
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from .models import Wedding
+from .analytics_models import (
+    WeddingAnalytics, WeeklyAnalyticsSnapshot, GuestEngagementMetrics
+)
+from .analytics_serializers import (
+    WeddingAnalyticsSerializer, WeeklyAnalyticsSnapshotSerializer,
+    GuestEngagementMetricsSerializer
+)
+from .analytics_service import WeddingAnalyticsService
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_analytics(request, wedding_id):
+    """Get comprehensive analytics for a wedding"""
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    
+    # Calculate fresh analytics
+    analytics = WeddingAnalyticsService.calculate_analytics(wedding)
+    engagement = WeddingAnalyticsService.calculate_engagement_metrics(wedding)
+    comparison = WeddingAnalyticsService.get_comparison_data(wedding)
+    
+    serializer = WeddingAnalyticsSerializer(analytics)
+    engagement_serializer = GuestEngagementMetricsSerializer(engagement)
+    
+    return Response({
+        'analytics': serializer.data,
+        'engagement': engagement_serializer.data,
+        'comparison': comparison,
+        'health_report': {
+            'budget_health': analytics.budget_health_score,
+            'task_health': analytics.task_health_score,
+            'guest_health': analytics.guest_health_score,
+            'planning_health': analytics.planning_health_score,
+            'overall_health': analytics.overall_health_score
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_trend_data(request, wedding_id):
+    """Get trend data from weekly snapshots"""
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    
+    snapshots = WeeklyAnalyticsSnapshot.objects.filter(wedding=wedding).order_by('week_number')
+    serializer = WeeklyAnalyticsSnapshotSerializer(snapshots, many=True)
+    
+    return Response({
+        'snapshots': serializer.data,
+        'total_weeks': snapshots.count()
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_snapshot(request, wedding_id):
+    """Manually create a weekly snapshot"""
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    
+    snapshot = WeddingAnalyticsService.create_weekly_snapshot(wedding)
+    serializer = WeeklyAnalyticsSnapshotSerializer(snapshot)
+    
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_category_breakdown(request, wedding_id):
+    """Get detailed budget category breakdown"""
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    
+    analytics = wedding.analytics
+    categories = analytics.budget_category_breakdown
+    
+    # Add percentage calculations
+    total = analytics.total_estimated_budget
+    breakdown = []
+    for cat, data in categories.items():
+        breakdown.append({
+            'category': cat,
+            'estimated': data['estimated'],
+            'actual': data['actual'],
+            'variance': data['estimated'] - data['actual'],
+            'percentage_of_budget': (data['estimated'] / float(total) * 100) if total > 0 else 0,
+            'item_count': data['count']
+        })
+    
+    return Response({'breakdown': breakdown})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_timeline_status(request, wedding_id):
+    """Get timeline event completion status"""
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    
+    analytics = wedding.analytics
+    timeline_status = analytics.completion_by_milestone
+    
+    total_events = len(timeline_status)
+    completed_events = sum(1 for event in timeline_status.values() if event.get('completed'))
+    completion_rate = (completed_events / total_events * 100) if total_events > 0 else 0
+    
+    return Response({
+        'events': timeline_status,
+        'total_events': total_events,
+        'completed_events': completed_events,
+        'completion_rate': completion_rate,
+        'days_until_wedding': analytics.days_until_wedding,
+        'weeks_until_wedding': analytics.weeks_until_wedding
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_guest_analytics(request, wedding_id):
+    """Get detailed guest analytics"""
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    
+    analytics = wedding.analytics
+    engagement = wedding.engagement_metrics.first() or WeddingAnalyticsService.calculate_engagement_metrics(wedding)
+    
+    total_guests = sum(guest.number_of_guests for guest in wedding.guests.all())
+    confirmed_guests = sum(guest.number_of_guests for guest in wedding.guests.filter(rsvp_status='confirmed'))
+    
+    return Response({
+        'invitations_sent': analytics.total_invitations_sent,
+        'confirmed': analytics.total_confirmed,
+        'pending': analytics.total_pending,
+        'declined': analytics.total_declined,
+        'average_per_invitation': analytics.average_guests_per_invitation,
+        'total_guest_count': total_guests,
+        'confirmed_guest_count': confirmed_guests,
+        'response_rate': engagement.rsvp_response_rate,
+        'relationship_breakdown': engagement.relationship_breakdown,
+        'dietary_requirements': engagement.dietary_requirements_percentage,
+        'group_size_distribution': engagement.group_size_distribution
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_health_scores(request, wedding_id):
+    """Get individual health scores"""
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    
+    analytics = wedding.analytics
+    
+    return Response({
+        'budget_health': {
+            'score': analytics.budget_health_score,
+            'message': 'On track' if analytics.budget_health_score >= 80 else 'Watch spending',
+            'variance': float(analytics.budget_variance),
+            'percentage_spent': (float(analytics.total_actual_spending) / float(analytics.total_estimated_budget) * 100) if analytics.total_estimated_budget > 0 else 0
+        },
+        'task_health': {
+            'score': analytics.task_health_score,
+            'message': 'On track' if analytics.task_health_score >= 80 else 'Behind schedule',
+            'completion': analytics.completion_percentage,
+            'overdue': analytics.overdue_tasks,
+            'pending': analytics.pending_tasks
+        },
+        'guest_health': {
+            'score': analytics.guest_health_score,
+            'message': 'Good response' if analytics.guest_health_score >= 70 else 'Follow up needed',
+            'response_rate': (analytics.total_confirmed + analytics.total_declined) / analytics.total_invitations_sent * 100 if analytics.total_invitations_sent > 0 else 0,
+            'pending_responses': analytics.total_pending
+        },
+        'planning_health': {
+            'score': analytics.planning_health_score,
+            'message': 'Good progress' if analytics.planning_health_score >= 70 else 'Catch up on milestones',
+            'days_until_wedding': analytics.days_until_wedding,
+            'weeks_until_wedding': analytics.weeks_until_wedding
+        },
+        'overall_health': {
+            'score': analytics.overall_health_score,
+            'status': 'Excellent' if analytics.overall_health_score >= 85 else 'Good' if analytics.overall_health_score >= 70 else 'Needs Attention'
+        }
+    })
+```
+
+### 1.5 Update URLs for Analytics
+
+Update `weddings/urls.py`:
+
+```python
+from .analytics_views import (
+    get_analytics,
+    get_trend_data,
+    create_snapshot,
+    get_category_breakdown,
+    get_timeline_status,
+    get_guest_analytics,
+    get_health_scores
+)
+
+# Add to urlpatterns
+analytics_patterns = [
+    path('weddings/<int:wedding_id>/analytics/', get_analytics, name='analytics'),
+    path('weddings/<int:wedding_id>/analytics/trends/', get_trend_data, name='trends'),
+    path('weddings/<int:wedding_id>/analytics/snapshot/', create_snapshot, name='snapshot'),
+    path('weddings/<int:wedding_id>/analytics/budget-breakdown/', get_category_breakdown, name='budget-breakdown'),
+    path('weddings/<int:wedding_id>/analytics/timeline-status/', get_timeline_status, name='timeline-status'),
+    path('weddings/<int:wedding_id>/analytics/guest-analytics/', get_guest_analytics, name='guest-analytics'),
+    path('weddings/<int:wedding_id>/analytics/health-scores/', get_health_scores, name='health-scores'),
+]
+```
+
+---
+
+## Phase 2: React Analytics Dashboard Components
+
+### 2.1 Main Analytics Dashboard
+
+Create `src/components/Analytics/AnalyticsDashboard.jsx`:
+
+```javascript
+import { useState, useEffect } from 'react';
+import { api } from '../../services/api';
+import { Loading } from '../Common/Loading';
+import { HealthScoreCards } from './HealthScoreCards';
+import { BudgetTrendChart } from './BudgetTrendChart';
+import { GuestMetricsChart } from './GuestMetricsChart';
+import { TaskProgressChart } from './TaskProgressChart';
+import { CategoryBreakdownChart } from './CategoryBreakdownChart';
+import './Analytics.css';
+
+export const AnalyticsDashboard = ({ weddingId }) => {
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [weddingId]);
+
+  const loadAnalytics = async () => {
+    try {
+      const response = await api.get(`/weddings/${weddingId}/analytics/`);
+      setAnalytics(response.data);
+    } catch (err) {
+      console.error('Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <Loading />;
+  if (!analytics) return <div>No analytics data available</div>;
+
+  return (
+    <div className="analytics-dashboard">
+      <h2>📊 Wedding Analytics Dashboard</h2>
+
+      <div className="analytics-tabs">
+        <button 
+          className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+          onClick={() => setActiveTab('overview')}
+        >
+          Overview
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'budget' ? 'active' : ''}`}
+          onClick={() => setActiveTab('budget')}
+        >
+          Budget Analysis
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'guests' ? 'active' : ''}`}
+          onClick={() => setActiveTab('guests')}
+        >
+          Guest Analytics
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'tasks' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tasks')}
+        >
+          Task Progress
+        </button>
+      </div>
+
+      {activeTab === 'overview' && (
+        <div className="tab-content">
+          <HealthScoreCards healthReport={analytics.health_report} />
+          <div className="analytics-grid">
+            <BudgetTrendChart comparison={analytics.comparison} />
+            <GuestMetricsChart comparison={analytics.comparison} />
+            <TaskProgressChart comparison={analytics.comparison} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'budget' && (
+        <div className="tab-content">
+          <CategoryBreakdownChart weddingId={weddingId} />
+          <BudgetTrendChart comparison={analytics.comparison} />
+        </div>
+      )}
+
+      {activeTab === 'guests' && (
+        <div className="tab-content">
+          <GuestMetricsChart comparison={analytics.comparison} />
+        </div>
+      )}
+
+      {activeTab === 'tasks' && (
+        <div className="tab-content">
+          <TaskProgressChart comparison={analytics.comparison} />
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+### 2.2 Health Score Cards Component
+
+Create `src/components/Analytics/HealthScoreCards.jsx`:
+
+```javascript
+import './Analytics.css';
+
+export const HealthScoreCards = ({ healthReport }) => {
+  const getScoreColor = (score) => {
+    if (score >= 85) return '#10b981';
+    if (score >= 70) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  const getScoreLabel = (score) => {
+    if (score >= 85) return 'Excellent';
+    if (score >= 70) return 'Good';
+    return 'Needs Work';
+  };
+
+  const ScoreCard = ({ title, score, icon }) => (
+    <div className="health-card">
+      <div className="health-card-icon">{icon}</div>
+      <h3>{title}</h3>
+      <div className="health-score-container">
+        <div 
+          className="health-score-circle"
+          style={{ borderColor: getScoreColor(score) }}
+        >
+          <span className="score-number">{Math.round(score)}</span>
+          <span className="score-percent">%</span>
+        </div>
+        <p className="score-label" style={{ color: getScoreColor(score) }}>
+          {getScoreLabel(score)}
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="health-cards-grid">
+      <ScoreCard 
+        title="Budget Health" 
+        score={healthReport.budget_health} 
+        icon="💰"
+      />
+      <ScoreCard 
+        title="Task Health" 
+        score={healthReport.task_health} 
+        icon="✓"
+      />
+      <ScoreCard 
+        title="Guest Health" 
+        score={healthReport.guest_health} 
+        icon="👥"
+      />
+      <ScoreCard 
+        title="Planning Health" 
+        score={healthReport.planning_health} 
+        icon="📅"
+      />
+      <div className="overall-health-card">
+        <h3>Overall Health</h3>
+        <div 
+          className="overall-score-circle"
+          style={{ borderColor: getScoreColor(healthReport.overall_health) }}
+        >
+          <span className="overall-score">{Math.round(healthReport.overall_health)}</span>
+        </div>
+        <p style={{ color: getScoreColor(healthReport.overall_health), textAlign: 'center' }}>
+          {healthReport.overall_health >= 85 ? 'On Track! 🎉' : 
+           healthReport.overall_health >= 70 ? 'Good Progress' : 
+           'Needs Attention'}
+        </p>
+      </div>
+    </div>
+  );
+};
+```
+
+### 2.3 Budget Trend Chart Component
+
+Create `src/components/Analytics/BudgetTrendChart.jsx`:
+
+```javascript
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+export const BudgetTrendChart = ({ comparison }) => {
+  const data = [
+    {
+      name: 'Estimated',
+      amount: comparison.budget.estimated,
+    },
+    {
+      name: 'Actual',
+      amount: comparison.budget.actual,
+    }
+  ];
+
+  const percentageSpent = (comparison.budget.actual / comparison.budget.estimated * 100).toFixed(1);
+  const isOverBudget = comparison.budget.actual > comparison.budget.estimated;
+
+  return (
+    <div className="chart-container card">
+      <h3>💰 Budget Overview</h3>
+      
+      <div className="chart-stats">
+        <div className="stat">
+          <span className="label">Estimated Budget:</span>
+          <span className="value">TZS {comparison.budget.estimated.toLocaleString()}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Actual Spending:</span>
+          <span className={`value ${isOverBudget ? 'over' : 'under'}`}>
+            TZS {comparison.budget.actual.toLocaleString()}
+          </span>
+        </div>
+        <div className="stat">
+          <span className="label">Variance:</span>
+          <span className={`value ${isOverBudget ? 'over' : 'under'}`}>
+            {isOverBudget ? '+' : '-'} TZS {Math.abs(comparison.budget.variance).toLocaleString()}
+          </span>
+        </div>
+        <div className="stat">
+          <span className="label">Spent:</span>
+          <span className="value">{percentageSpent}%</span>
+        </div>
+      </div>
+
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip formatter={(value) => `TZS ${value.toLocaleString()}`} />
+          <Bar dataKey="amount" fill="#667eea" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+```
+
+### 2.4 Guest Metrics Chart Component
+
+Create `src/components/Analytics/GuestMetricsChart.jsx`:
+
+```javascript
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+export const GuestMetricsChart = ({ comparison }) => {
+  const guestData = [
+    { name: 'Confirmed', value: comparison.guests.confirmed, color: '#10b981' },
+    { name: 'Pending', value: comparison.guests.pending, color: '#f59e0b' },
+    { name: 'Declined', value: comparison.guests.declined, color: '#ef4444' }
+  ];
+
+  const responseRate = (
+    (comparison.guests.confirmed + comparison.guests.declined) / 
+    comparison.guests.invited * 100
+  ).toFixed(1);
+
+  return (
+    <div className="chart-container card">
+      <h3>👥 Guest Response Analytics</h3>
+
+      <div className="chart-stats">
+        <div className="stat">
+          <span className="label">Total Invitations:</span>
+          <span className="value">{comparison.guests.invited}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Confirmed:</span>
+          <span className="value confirmed">{comparison.guests.confirmed}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Pending:</span>
+          <span className="value pending">{comparison.guests.pending}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Response Rate:</span>
+          <span className="value">{responseRate}%</span>
+        </div>
+      </div>
+
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={guestData}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={({ name, value }) => `${name}: ${value}`}
+            outerRadius={100}
+            fill="#8884d8"
+            dataKey="value"
+          >
+            {guestData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+```
+
+### 2.5 Task Progress Chart Component
+
+Create `src/components/Analytics/TaskProgressChart.jsx`:
+
+```javascript
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+
+export const TaskProgressChart = ({ comparison }) => {
+  const taskData = [
+    { name: 'Total', value: comparison.tasks.total },
+    { name: 'Completed', value: comparison.tasks.completed },
+    { name: 'Pending', value: comparison.tasks.pending },
+    { name: 'Overdue', value: comparison.tasks.overdue }
+  ];
+
+  return (
+    <div className="chart-container card">
+      <h3>✓ Task Progress</h3>
+
+      <div className="chart-stats">
+        <div className="stat">
+          <span className="label">Total Tasks:</span>
+          <span className="value">{comparison.tasks.total}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Completed:</span>
+          <span className="value completed">{comparison.tasks.completed}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Pending:</span>
+          <span className="value pending">{comparison.tasks.pending}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Completion:</span>
+          <span className="value">{comparison.tasks.completion_percentage.toFixed(1)}%</span>
+        </div>
+      </div>
+
+      <div className="progress-bar-container">
+        <div className="progress-bar-label">Overall Progress</div>
+        <div className="progress-bar-bg">
+          <div 
+            className="progress-bar-fill"
+            style={{ width: `${comparison.tasks.completion_percentage}%` }}
+          >
+            {comparison.tasks.completion_percentage.toFixed(0)}%
+          </div>
+        </div>
+      </div>
+
+      {comparison.tasks.overdue > 0 && (
+        <div className="alert error">
+          ⚠️ You have {comparison.tasks.overdue} overdue tasks. Please review and update!
+        </div>
+      )}
+
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={taskData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="value" fill="#667eea" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+```
+
+### 2.6 Category Breakdown Chart Component
+
+Create `src/components/Analytics/CategoryBreakdownChart.jsx`:
+
+```javascript
+import { useState, useEffect } from 'react';
+import { api } from '../../services/api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Loading } from '../Common/Loading';
+
+export const CategoryBreakdownChart = ({ weddingId }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadCategoryData();
+  }, [weddingId]);
+
+  const loadCategoryData = async () => {
+    try {
+      const response = await api.get(`/weddings/${weddingId}/analytics/budget-breakdown/`);
+      setData(response.data.breakdown);
+    } catch (err) {
+      console.error('Failed to load category data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <Loading />;
+  if (!data) return <div>No data available</div>;
+
+  return (
+    <div className="chart-container card">
+      <h3>📊 Budget by Category</h3>
+
+      <div className="category-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Estimated</th>
+              <th>Actual</th>
+              <th>Variance</th>
+              <th>% of Budget</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item, index) => (
+              <tr key={index}>
+                <td className="category-name">
+                  {item.category.replace(/_/g, ' ').toUpperCase()}
+                </td>
+                <td>TZS {item.estimated.toLocaleString()}</td>
+                <td className={item.actual > item.estimated ? 'over' : 'under'}>
+                  TZS {item.actual.toLocaleString()}
+                </td>
+                <td className={item.variance >= 0 ? 'positive' : 'negative'}>
+                  TZS {item.variance.toLocaleString()}
+                </td>
+                <td>{item.percentage_of_budget.toFixed(1)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <ResponsiveContainer width="100%" height={400}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis 
+            dataKey="category" 
+            angle={-45}
+            textAnchor="end"
+            height={100}
+          />
+          <YAxis />
+          <Tooltip formatter={(value) => `TZS ${value.toLocaleString()}`} />
+          <Legend />
+          <Bar dataKey="estimated" fill="#3b82f6" name="Estimated" />
+          <Bar dataKey="actual" fill="#ef4444" name="Actual" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+```
+
+### 2.7 Analytics Styles
+
+Create `src/components/Analytics/Analytics.css`:
+
+```css
+.analytics-dashboard {
+  padding: 20px 0;
+}
+
+.analytics-dashboard h2 {
+  color: #1f2937;
+  margin-bottom: 30px;
+  font-size: 2rem;
+}
+
+.analytics-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-weight: 600;
+  color: #6b7280;
+  transition: all 0.3s;
+  font-size: 0.95rem;
+}
+
+.tab-btn.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.tab-btn:hover {
+  color: #3b82f6;
+}
+
+.tab-content {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Health Cards */
+.health-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.health-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.health-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.health-card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.health-card h3 {
+  color: #1f2937;
+  margin: 10px 0;
+  font-size: 1rem;
+}
+
+.health-score-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.health-score-circle {
+  width: 100px;
+  height: 100px;
+  border: 4px solid;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.score-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.score-percent {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.score-label {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.overall-health-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+.overall-health-card h3 {
+  color: white;
+  margin-bottom: 20px;
+}
+
+.overall-score-circle {
+  width: 120px;
+  height: 120px;
+  border: 4px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.overall-score {
+  font-size: 2.5rem;
+  font-weight: bold;
+}
+
+/* Charts */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.chart-container {
+  background: white;
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.chart-container h3 {
+  color: #1f2937;
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+}
+
+.chart-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat {
+  background-color: #f9fafb;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.stat .label {
+  display: block;
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 5px;
+}
+
+.stat .value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.stat .value.confirmed {
+  color: #10b981;
+}
+
+.stat .value.pending {
+  color: #f59e0b;
+}
+
+.stat .value.completed {
+  color: #10b981;
+}
+
+.stat .value.over {
+  color: #ef4444;
+}
+
+.stat .value.under {
+  color: #10b981;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+  margin: 20px 0;
+}
+
+.progress-bar-label {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 10px;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 30px;
+  background-color: #e5e7eb;
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 0.875rem;
+  transition: width 0.3s ease;
+}
+
+/* Category Table */
+.category-table {
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.category-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.category-table th {
+  background-color: #f0f9ff;
+  color: #1f2937;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.category-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.category-table tr:hover {
+  background-color: #f9fafb;
+}
+
+.category-name {
+  font-weight: 600;
+  color: #1f2937;
+  text-transform: capitalize;
+}
+
+.category-table .over {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.category-table .under {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.category-table .positive {
+  color: #10b981;
+}
+
+.category-table .negative {
+  color: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .health-cards-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .overall-health-card {
+    grid-column: 1 / -1;
+  }
+
+  .chart-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .analytics-tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    padding: 10px 15px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .health-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .category-table {
+    font-size: 0.85rem;
+  }
+
+  .category-table th,
+  .category-table td {
+    padding: 8px;
+  }
+}
+```
+
+---
+
+## Phase 3: Update Main Wedding Detail Component
+
+Update `src/components/Wedding/WeddingDetail.jsx`:
+
+```javascript
+import { AnalyticsDashboard } from '../Analytics/AnalyticsDashboard';
+
+// Add this in the JSX, after existing tabs:
+<button 
+  className={`tab-button ${activeTab === 'analytics' ? 'active' : ''}`}
+  onClick={() => setActiveTab('analytics')}
+>
+  Analytics
+</button>
+
+// Add this tab content:
+<div className={`tab-content ${activeTab === 'analytics' ? 'active' : ''}`}>
+  <AnalyticsDashboard weddingId={id} />
+</div>
+```
+
+---
+
+## Phase 4: Install Analytics Dependencies
+
+### Backend:
+```bash
+pip install django-db-stats
+```
+
+### Frontend (Already included with Recharts):
+```bash
+npm list recharts  # Should already be installed
+```
+
+---
+
+## Phase 5: Advanced Report Generation
+
+### 5.1 Create Comprehensive Report Generator
+
+Update `weddings/pdf_service.py`:
+
+```python
+# Add this import at the top
+from datetime import datetime
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+class AnalyticsReportPDF:
+    @staticmethod
+    def generate_comprehensive_report(wedding):
+        """Generate comprehensive analytics report PDF"""
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title Page
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=28,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        elements.append(Paragraph("Wedding Analytics Report", title_style))
+        elements.append(Paragraph(f"{wedding.bride_name} & {wedding.groom_name}", styles['Normal']))
+        elements.append(Spacer(1, 0.5*inch))
+        
+        # Get analytics
+        analytics = wedding.analytics
+        
+        # Executive Summary
+        elements.append(Paragraph("Executive Summary", styles['Heading2']))
+        summary = f"""
+        <b>Wedding Date:</b> {wedding.wedding_date.strftime('%B %d, %Y')}<br/>
+        <b>Days Until Wedding:</b> {analytics.days_until_wedding}<br/>
+        <b>Overall Health Score:</b> {analytics.overall_health_score:.1f}/100<br/>
+        <b>Budget Status:</b> {('Under Budget' if analytics.budget_variance < 0 else 'Over Budget')} by TZS {abs(analytics.budget_variance):,.0f}<br/>
+        <b>Guest Response Rate:</b> {(analytics.total_confirmed + analytics.total_declined) / analytics.total_invitations_sent * 100:.1f}%<br/>
+        <b>Task Completion:</b> {analytics.completion_percentage:.1f}%
+        """
+        elements.append(Paragraph(summary, styles['Normal']))
+        elements.append(Spacer(1, 0.3*inch))
+        elements.append(PageBreak())
+        
+        # Budget Analysis
+        elements.append(Paragraph("Budget Analysis", styles['Heading2']))
+        budget_data = [
+            ['Category', 'Estimated', 'Actual', 'Variance'],
+        ]
+        
+        for cat, data in analytics.budget_category_breakdown.items():
+            budget_data.append([
+                cat.replace('_', ' ').title(),
+                f"TZS {data['estimated']:,.0f}",
+                f"TZS {data['actual']:,.0f}",
+                f"TZS {data['estimated'] - data['actual']:,.0f}"
+            ])
+        
+        budget_table = Table(budget_data)
+        budget_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(budget_table)
+        elements.append(Spacer(1, 0.3*inch))
+        elements.append(PageBreak())
+        
+        # Guest Analytics
+        elements.append(Paragraph("Guest Analytics", styles['Heading2']))
+        guest_data = f"""
+        <b>Total Invitations:</b> {analytics.total_invitations_sent}<br/>
+        <b>Confirmed:</b> {analytics.total_confirmed}<br/>
+        <b>Pending:</b> {analytics.total_pending}<br/>
+        <b>Declined:</b> {analytics.total_declined}<br/>
+        <b>Average Guests per Invitation:</b> {analytics.average_guests_per_invitation:.1f}
+        """
+        elements.append(Paragraph(guest_data, styles['Normal']))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Task Analytics
+        elements.append(Paragraph("Task Analytics", styles['Heading2']))
+        task_data = f"""
+        <b>Total Tasks:</b> {analytics.total_tasks}<br/>
+        <b>Completed:</b> {analytics.completed_tasks}<br/>
+        <b>Pending:</b> {analytics.pending_tasks}<br/>
+        <b>Overdue:</b> {analytics.overdue_tasks}<br/>
+        <b>Completion Percentage:</b> {analytics.completion_percentage:.1f}%
+        """
+        elements.append(Paragraph(task_data, styles['Normal']))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Health Scores
+        elements.append(PageBreak())
+        elements.append(Paragraph("Health Scores", styles['Heading2']))
+        health_data = f"""
+        <b>Budget Health:</b> {analytics.budget_health_score:.1f}/100<br/>
+        <b>Task Health:</b> {analytics.task_health_score:.1f}/100<br/>
+        <b>Guest Health:</b> {analytics.guest_health_score:.1f}/100<br/>
+        <b>Planning Health:</b> {analytics.planning_health_score:.1f}/100<br/>
+        <b>Overall Health:</b> {analytics.overall_health_score:.1f}/100
+        """
+        elements.append(Paragraph(health_data, styles['Normal']))
+        
+        # Footer
+        elements.append(Spacer(1, 0.5*inch))
+        footer = f"Report Generated: {datetime.now().strftime('%B %d, %Y %I:%M %p')}"
+        elements.append(Paragraph(footer, ParagraphStyle('Footer', parent=styles['Normal'], alignment=TA_CENTER, fontSize=9, textColor=colors.grey)))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+```
+
+### 5.2 Add Report Download Endpoint
+
+Update `weddings/pdf_views.py`:
+
+```python
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_analytics_report_pdf(request, wedding_id):
+    from .pdf_service import AnalyticsReportPDF
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    buffer = AnalyticsReportPDF.generate_comprehensive_report(wedding)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'analytics_report_{wedding.id}.pdf',
+        content_type='application/pdf'
+    )
+```
+
+---
+
+## Phase 6: Update Analytics API Service
+
+Update `src/services/api.js`:
+
+```javascript
+export const analyticsAPI = {
+  getAnalytics: (weddingId) => api.get(`/weddings/${weddingId}/analytics/`),
+  getTrends: (weddingId) => api.get(`/weddings/${weddingId}/analytics/trends/`),
+  getHealthScores: (weddingId) => api.get(`/weddings/${weddingId}/analytics/health-scores/`),
+  getCategoryBreakdown: (weddingId) => api.get(`/weddings/${weddingId}/analytics/budget-breakdown/`),
+  getTimelineStatus: (weddingId) => api.get(`/weddings/${weddingId}/analytics/timeline-status/`),
+  getGuestAnalytics: (weddingId) => api.get(`/weddings/${weddingId}/analytics/guest-analytics/`),
+};
+```
+
+---
+
+## Phase 7: Backend Migrations
+
+```bash
+cd harusi_backend
+python manage.py makemigrations
+python manage.py migrate
+```
+
+---
+
+## Phase 8: Run Complete System
+
+### Terminal 1 - Backend:
+```bash
+cd harusi_backend
+source venv/bin/activate
+python manage.py runserver
+```
+
+### Terminal 2 - Frontend:
+```bash
+cd harusi-frontend
+npm start
+```
+
+---
+
+## Feature Summary
+
+### Analytics Provided:
+
+✅ **Health Score Dashboard**
+- Budget Health (0-100)
+- Task Health (0-100)
+- Guest Health (0-100)
+- Planning Health (0-100)
+- Overall Health (0-100)
+
+✅ **Budget Analytics**
+- Estimated vs Actual comparison
+- Category breakdown with variance
+- Budget variance tracking
+- Percentage spent analysis
+
+✅ **Guest Analytics**
+- RSVP response rate
+- Relationship breakdown
+- Dietary requirements analysis
+- Group size distribution
+
+✅ **Task Analytics**
+- Completion percentage
+- Overdue task tracking
+- Progress visualization
+- Task status breakdown
+
+✅ **Timeline Analytics**
+- Milestone completion tracking
+- Days until wedding
+- Event status overview
+
+✅ **Trend Analysis**
+- Weekly snapshots
+- Spending trends
+- Response rate trends
+- Completion trends
+
+✅ **PDF Reports**
+- Comprehensive analytics report
+- Exportable data
+
+---
+
+## Data Insights Available
+
+1. **Financial Health**: How on-track you are with budget
+2. **Execution Health**: Task completion and timeliness
+3. **Guest Engagement**: RSVP rates and patterns
+4. **Timeline Progress**: Milestone completion
+5. **Overall Wedding Health**: Combined metric
+
+---
+
+## Usage Tips
+
+1. **Weekly Reviews**: Check health scores weekly
+2. **Budget Tracking**: Monitor spending patterns
+3. **Task Management**: Stay on top of overdue items
+4. **Guest Follow-up**: Use response rates to follow up
+5. **Export Reports**: Share PDF reports with vendors/planners
+
+Your Harusi system now has enterprise-grade analytics! 📊✨

@@ -1,0 +1,1371 @@
+# Guest Pledge & Payment Tracking System
+
+## Phase 1: Backend Models
+
+### 1.1 Add Pledge Model to `weddings/models.py`
+
+Add this model to your `weddings/models.py`:
+
+```python
+class GuestPledge(models.Model):
+    """Track guest financial contributions/pledges"""
+    PAYMENT_STATUS_CHOICES = [
+        ('pledged', 'Pledged'),
+        ('partial', 'Partially Paid'),
+        ('paid', 'Fully Paid'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    PAYMENT_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('mobile_money', 'Mobile Money (M-Pesa/TigoPesa/AirtelMoney)'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('cheque', 'Cheque'),
+        ('other', 'Other'),
+    ]
+    
+    CONTRIBUTION_TYPE_CHOICES = [
+        ('general', 'General Contribution'),
+        ('venue', 'Venue'),
+        ('catering', 'Catering'),
+        ('decoration', 'Decoration'),
+        ('photography', 'Photography'),
+        ('transport', 'Transport'),
+        ('gift', 'Gift'),
+        ('other', 'Other'),
+    ]
+    
+    guest = models.ForeignKey(Guest, on_delete=models.CASCADE, related_name='pledges')
+    wedding = models.ForeignKey(Wedding, on_delete=models.CASCADE, related_name='pledges')
+    
+    # Pledge Information
+    pledged_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    # Payment Details
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pledged')
+    payment_method = models.CharField(max_length=50, choices=PAYMENT_METHOD_CHOICES, blank=True)
+    contribution_type = models.CharField(max_length=50, choices=CONTRIBUTION_TYPE_CHOICES, default='general')
+    
+    # Additional Information
+    pledge_date = models.DateField(auto_now_add=True)
+    payment_deadline = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    
+    # Tracking
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_pledges')
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate balance
+        self.balance = self.pledged_amount - self.paid_amount
+        
+        # Auto-update payment status
+        if self.paid_amount == 0:
+            self.payment_status = 'pledged'
+        elif self.paid_amount >= self.pledged_amount:
+            self.payment_status = 'paid'
+        elif self.paid_amount > 0:
+            self.payment_status = 'partial'
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.guest.name} - TZS {self.pledged_amount}"
+
+
+class PledgePayment(models.Model):
+    """Track individual payments towards pledges"""
+    pledge = models.ForeignKey(GuestPledge, on_delete=models.CASCADE, related_name='payments')
+    
+    amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    payment_date = models.DateField()
+    payment_method = models.CharField(max_length=50, choices=GuestPledge.PAYMENT_METHOD_CHOICES)
+    reference_number = models.CharField(max_length=100, blank=True, help_text="Transaction ID, Receipt No, etc")
+    notes = models.TextField(blank=True)
+    
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-payment_date']
+    
+    def __str__(self):
+        return f"Payment: TZS {self.amount} - {self.payment_date}"
+```
+
+### 1.2 Create Serializers
+
+Create/Update `weddings/serializers.py` to add:
+
+```python
+from .models import GuestPledge, PledgePayment
+
+class PledgePaymentSerializer(serializers.ModelSerializer):
+    recorded_by_username = serializers.CharField(source='recorded_by.username', read_only=True)
+    
+    class Meta:
+        model = PledgePayment
+        fields = ['id', 'pledge', 'amount', 'payment_date', 'payment_method', 
+                  'reference_number', 'notes', 'recorded_by', 'recorded_by_username', 'created_at']
+        read_only_fields = ['id', 'created_at', 'recorded_by']
+
+
+class GuestPledgeSerializer(serializers.ModelSerializer):
+    guest_name = serializers.CharField(source='guest.name', read_only=True)
+    payments = PledgePaymentSerializer(many=True, read_only=True)
+    payment_progress = serializers.SerializerMethodField()
+    
+    def get_payment_progress(self, obj):
+        if obj.pledged_amount > 0:
+            return (obj.paid_amount / obj.pledged_amount * 100)
+        return 0
+    
+    class Meta:
+        model = GuestPledge
+        fields = ['id', 'guest', 'guest_name', 'wedding', 'pledged_amount', 'paid_amount', 
+                  'balance', 'payment_status', 'payment_method', 'contribution_type', 
+                  'pledge_date', 'payment_deadline', 'notes', 'payments', 'payment_progress',
+                  'created_at', 'updated_at']
+        read_only_fields = ['id', 'balance', 'payment_status', 'created_at', 'updated_at', 'wedding']
+```
+
+### 1.3 Create Views
+
+Create `weddings/pledge_views.py`:
+
+```python
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from django.db.models import Sum, Q
+from .models import Wedding, Guest, GuestPledge, PledgePayment
+from .serializers import GuestPledgeSerializer, PledgePaymentSerializer
+
+class GuestPledgeViewSet(viewsets.ModelViewSet):
+    serializer_class = GuestPledgeSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        wedding_id = self.kwargs.get('wedding_id')
+        return GuestPledge.objects.filter(wedding_id=wedding_id, wedding__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        wedding_id = self.kwargs.get('wedding_id')
+        wedding = get_object_or_404(Wedding, id=wedding_id, user=self.request.user)
+        serializer.save(wedding=wedding, created_by=self.request.user)
+    
+    @action(detail=False, methods=['get'])
+    def summary(self, request, wedding_id=None):
+        """Get pledge summary for the wedding"""
+        pledges = self.get_queryset()
+        
+        total_pledged = pledges.aggregate(Sum('pledged_amount'))['pledged_amount__sum'] or 0
+        total_paid = pledges.aggregate(Sum('paid_amount'))['paid_amount__sum'] or 0
+        total_balance = pledges.aggregate(Sum('balance'))['balance__sum'] or 0
+        
+        status_breakdown = {
+            'pledged': pledges.filter(payment_status='pledged').count(),
+            'partial': pledges.filter(payment_status='partial').count(),
+            'paid': pledges.filter(payment_status='paid').count(),
+            'cancelled': pledges.filter(payment_status='cancelled').count(),
+        }
+        
+        contribution_breakdown = {}
+        for pledge in pledges:
+            contrib_type = pledge.contribution_type
+            if contrib_type not in contribution_breakdown:
+                contribution_breakdown[contrib_type] = {
+                    'pledged': 0,
+                    'paid': 0
+                }
+            contribution_breakdown[contrib_type]['pledged'] += float(pledge.pledged_amount)
+            contribution_breakdown[contrib_type]['paid'] += float(pledge.paid_amount)
+        
+        return Response({
+            'total_pledged': total_pledged,
+            'total_paid': total_paid,
+            'total_balance': total_balance,
+            'collection_rate': (total_paid / total_pledged * 100) if total_pledged > 0 else 0,
+            'status_breakdown': status_breakdown,
+            'contribution_breakdown': contribution_breakdown,
+            'total_pledges': pledges.count()
+        })
+    
+    @action(detail=True, methods=['post'])
+    def record_payment(self, request, pk=None, **kwargs):
+        """Record a payment towards a pledge"""
+        pledge = self.get_object()
+        
+        serializer = PledgePaymentSerializer(data=request.data)
+        if serializer.is_valid():
+            payment = serializer.save(pledge=pledge, recorded_by=request.user)
+            
+            # Update pledge paid amount
+            pledge.paid_amount += payment.amount
+            pledge.save()
+            
+            return Response(GuestPledgeSerializer(pledge).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PledgePaymentViewSet(viewsets.ModelViewSet):
+    serializer_class = PledgePaymentSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        pledge_id = self.kwargs.get('pledge_id')
+        return PledgePayment.objects.filter(
+            pledge_id=pledge_id,
+            pledge__wedding__user=self.request.user
+        )
+    
+    def perform_create(self, serializer):
+        pledge_id = self.kwargs.get('pledge_id')
+        pledge = get_object_or_404(GuestPledge, id=pledge_id, wedding__user=self.request.user)
+        
+        payment = serializer.save(pledge=pledge, recorded_by=self.request.user)
+        
+        # Update pledge total
+        pledge.paid_amount += payment.amount
+        pledge.save()
+```
+
+### 1.4 Update URLs
+
+Add to `weddings/urls.py`:
+
+```python
+from .pledge_views import GuestPledgeViewSet, PledgePaymentViewSet
+
+urlpatterns = [
+    # ... existing patterns ...
+    
+    # Pledge tracking
+    path('weddings/<int:wedding_id>/pledges/', GuestPledgeViewSet.as_view({'get': 'list', 'post': 'create'}), name='pledge-list'),
+    path('weddings/<int:wedding_id>/pledges/<int:pk>/', GuestPledgeViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='pledge-detail'),
+    path('weddings/<int:wedding_id>/pledges/summary/', GuestPledgeViewSet.as_view({'get': 'summary'}), name='pledge-summary'),
+    path('weddings/<int:wedding_id>/pledges/<int:pk>/record_payment/', GuestPledgeViewSet.as_view({'post': 'record_payment'}), name='pledge-record-payment'),
+    
+    # Payments
+    path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/', PledgePaymentViewSet.as_view({'get': 'list', 'post': 'create'}), name='payment-list'),
+    path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/<int:pk>/', PledgePaymentViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='payment-detail'),
+]
+```
+
+### 1.5 Run Migrations
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+---
+
+## Phase 2: React Frontend Components
+
+### 2.1 Add API Functions
+
+Update `src/services/api.js`:
+
+```javascript
+// Pledge endpoints
+export const pledgeAPI = {
+  getAll: (weddingId) => api.get(`/weddings/${weddingId}/pledges/`),
+  getOne: (weddingId, pledgeId) => api.get(`/weddings/${weddingId}/pledges/${pledgeId}/`),
+  create: (weddingId, data) => api.post(`/weddings/${weddingId}/pledges/`, data),
+  update: (weddingId, pledgeId, data) => api.put(`/weddings/${weddingId}/pledges/${pledgeId}/`, data),
+  delete: (weddingId, pledgeId) => api.delete(`/weddings/${weddingId}/pledges/${pledgeId}/`),
+  getSummary: (weddingId) => api.get(`/weddings/${weddingId}/pledges/summary/`),
+  recordPayment: (weddingId, pledgeId, data) => 
+    api.post(`/weddings/${weddingId}/pledges/${pledgeId}/record_payment/`, data),
+};
+
+// Payment endpoints
+export const pledgePaymentAPI = {
+  getAll: (weddingId, pledgeId) => api.get(`/weddings/${weddingId}/pledges/${pledgeId}/payments/`),
+  create: (weddingId, pledgeId, data) => api.post(`/weddings/${weddingId}/pledges/${pledgeId}/payments/`, data),
+  delete: (weddingId, pledgeId, paymentId) => 
+    api.delete(`/weddings/${weddingId}/pledges/${pledgeId}/payments/${paymentId}/`),
+};
+```
+
+### 2.2 Create Pledge Management Component
+
+Create `src/components/Pledges/PledgeManagement.jsx`:
+
+```javascript
+import { useState, useEffect } from 'react';
+import { pledgeAPI } from '../../services/api';
+import { PledgeForm } from './PledgeForm';
+import { PledgeSummary } from './PledgeSummary';
+import { Loading } from '../Common/Loading';
+import './Pledges.css';
+
+export const PledgeManagement = ({ weddingId }) => {
+  const [pledges, setPledges] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingPledge, setEditingPledge] = useState(null);
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    loadData();
+  }, [weddingId]);
+
+  const loadData = async () => {
+    try {
+      const [pledgesRes, summaryRes] = await Promise.all([
+        pledgeAPI.getAll(weddingId),
+        pledgeAPI.getSummary(weddingId)
+      ]);
+      setPledges(pledgesRes.data);
+      setSummary(summaryRes.data);
+    } catch (err) {
+      console.error('Failed to load pledges');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (pledgeId) => {
+    if (window.confirm('Delete this pledge?')) {
+      try {
+        await pledgeAPI.delete(weddingId, pledgeId);
+        loadData();
+      } catch (err) {
+        console.error('Failed to delete pledge');
+      }
+    }
+  };
+
+  const handleSave = () => {
+    loadData();
+    setShowForm(false);
+    setEditingPledge(null);
+  };
+
+  if (loading) return <Loading />;
+
+  const filteredPledges = pledges.filter(p => 
+    filter === 'all' ? true : p.payment_status === filter
+  );
+
+  return (
+    <div className="pledge-management">
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <h2>💰 Guest Contributions & Pledges</h2>
+        <button className="primary" onClick={() => setShowForm(!showForm)}>
+          {showForm ? '✕ Cancel' : '+ Add Pledge'}
+        </button>
+      </div>
+
+      {showForm && (
+        <PledgeForm 
+          weddingId={weddingId}
+          pledge={editingPledge}
+          onSave={handleSave}
+          onCancel={() => { setShowForm(false); setEditingPledge(null); }}
+        />
+      )}
+
+      {summary && <PledgeSummary summary={summary} />}
+
+      <div className="pledge-filters">
+        <button 
+          className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+          onClick={() => setFilter('all')}
+        >
+          All ({pledges.length})
+        </button>
+        <button 
+          className={`filter-btn ${filter === 'pledged' ? 'active' : ''}`}
+          onClick={() => setFilter('pledged')}
+        >
+          Pledged ({summary?.status_breakdown.pledged || 0})
+        </button>
+        <button 
+          className={`filter-btn ${filter === 'partial' ? 'active' : ''}`}
+          onClick={() => setFilter('partial')}
+        >
+          Partial ({summary?.status_breakdown.partial || 0})
+        </button>
+        <button 
+          className={`filter-btn ${filter === 'paid' ? 'active' : ''}`}
+          onClick={() => setFilter('paid')}
+        >
+          Paid ({summary?.status_breakdown.paid || 0})
+        </button>
+      </div>
+
+      {filteredPledges.length === 0 ? (
+        <div className="empty-state">
+          <p>No pledges recorded yet</p>
+        </div>
+      ) : (
+        <div className="pledges-grid">
+          {filteredPledges.map(pledge => (
+            <div key={pledge.id} className="pledge-card card">
+              <div className="pledge-header">
+                <div>
+                  <h3>{pledge.guest_name}</h3>
+                  <p className="pledge-type">{pledge.contribution_type.replace('_', ' ')}</p>
+                </div>
+                <span className={`status-badge ${pledge.payment_status}`}>
+                  {pledge.payment_status}
+                </span>
+              </div>
+
+              <div className="pledge-amounts">
+                <div className="amount-item">
+                  <span className="label">Pledged:</span>
+                  <span className="value">TZS {pledge.pledged_amount.toLocaleString()}</span>
+                </div>
+                <div className="amount-item">
+                  <span className="label">Paid:</span>
+                  <span className="value paid">TZS {pledge.paid_amount.toLocaleString()}</span>
+                </div>
+                <div className="amount-item">
+                  <span className="label">Balance:</span>
+                  <span className="value balance">TZS {pledge.balance.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="progress-bar-container">
+                <div className="progress-bar-bg">
+                  <div 
+                    className="progress-bar-fill"
+                    style={{ width: `${pledge.payment_progress}%` }}
+                  >
+                    {pledge.payment_progress.toFixed(0)}%
+                  </div>
+                </div>
+              </div>
+
+              {pledge.payment_deadline && (
+                <p className="deadline">
+                  📅 Deadline: {new Date(pledge.payment_deadline).toLocaleDateString()}
+                </p>
+              )}
+
+              {pledge.notes && <p className="pledge-notes">{pledge.notes}</p>}
+
+              <div className="pledge-actions">
+                <button 
+                  className="primary" 
+                  onClick={() => {
+                    // Open payment recording modal
+                    // We'll create this next
+                  }}
+                >
+                  Record Payment
+                </button>
+                <button 
+                  className="secondary" 
+                  onClick={() => { setEditingPledge(pledge); setShowForm(true); }}
+                >
+                  Edit
+                </button>
+                <button 
+                  className="danger" 
+                  onClick={() => handleDelete(pledge.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+### 2.3 Create Pledge Form
+
+Create `src/components/Pledges/PledgeForm.jsx`:
+
+```javascript
+import { useState, useEffect } from 'react';
+import { pledgeAPI, guestAPI } from '../../services/api';
+
+export const PledgeForm = ({ weddingId, pledge, onSave, onCancel }) => {
+  const [guests, setGuests] = useState([]);
+  const [formData, setFormData] = useState({
+    guest: '',
+    pledged_amount: '',
+    paid_amount: 0,
+    payment_method: '',
+    contribution_type: 'general',
+    payment_deadline: '',
+    notes: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadGuests();
+    if (pledge) {
+      setFormData(pledge);
+    }
+  }, [pledge]);
+
+  const loadGuests = async () => {
+    try {
+      const response = await guestAPI.getAll(weddingId);
+      setGuests(response.data);
+    } catch (err) {
+      console.error('Failed to load guests');
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (pledge) {
+        await pledgeAPI.update(weddingId, pledge.id, formData);
+      } else {
+        await pledgeAPI.create(weddingId, formData);
+      }
+      onSave();
+    } catch (err) {
+      console.error('Failed to save pledge');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="card pledge-form">
+      <h3>{pledge ? 'Edit Pledge' : 'Record New Pledge'}</h3>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Guest *</label>
+          <select name="guest" value={formData.guest} onChange={handleChange} required>
+            <option value="">Select Guest</option>
+            {guests.map(g => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Contribution Type</label>
+          <select name="contribution_type" value={formData.contribution_type} onChange={handleChange}>
+            <option value="general">General Contribution</option>
+            <option value="venue">Venue</option>
+            <option value="catering">Catering</option>
+            <option value="decoration">Decoration</option>
+            <option value="photography">Photography</option>
+            <option value="transport">Transport</option>
+            <option value="gift">Gift</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Pledged Amount (TZS) *</label>
+          <input
+            type="number"
+            name="pledged_amount"
+            value={formData.pledged_amount}
+            onChange={handleChange}
+            required
+            step="1000"
+          />
+        </div>
+        <div className="form-group">
+          <label>Initial Payment (TZS)</label>
+          <input
+            type="number"
+            name="paid_amount"
+            value={formData.paid_amount}
+            onChange={handleChange}
+            step="1000"
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Payment Method</label>
+          <select name="payment_method" value={formData.payment_method} onChange={handleChange}>
+            <option value="">Select Method</option>
+            <option value="cash">Cash</option>
+            <option value="mobile_money">Mobile Money (M-Pesa/TigoPesa)</option>
+            <option value="bank_transfer">Bank Transfer</option>
+            <option value="cheque">Cheque</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Payment Deadline</label>
+          <input
+            type="date"
+            name="payment_deadline"
+            value={formData.payment_deadline}
+            onChange={handleChange}
+          />
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label>Notes</label>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          rows="3"
+          placeholder="Add any additional information..."
+        />
+      </div>
+
+      <div className="form-actions">
+        <button type="submit" className="primary" disabled={loading}>
+          {loading ? 'Saving...' : 'Save Pledge'}
+        </button>
+        <button type="button" className="secondary" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+};
+```
+
+### 2.4 Create Pledge Summary
+
+Create `src/components/Pledges/PledgeSummary.jsx`:
+
+```javascript
+export const PledgeSummary = ({ summary }) => {
+  return (
+    <div className="pledge-summary-cards">
+      <div className="summary-card">
+        <h4>Total Pledged</h4>
+        <p className="summary-amount">TZS {summary.total_pledged.toLocaleString()}</p>
+      </div>
+      <div className="summary-card">
+        <h4>Total Collected</h4>
+        <p className="summary-amount collected">TZS {summary.total_paid.toLocaleString()}</p>
+      </div>
+      <div className="summary-card">
+        <h4>Outstanding Balance</h4>
+        <p className="summary-amount balance">TZS {summary.total_balance.toLocaleString()}</p>
+      </div>
+      <div className="summary-card">
+        <h4>Collection Rate</h4>
+        <div className="collection-rate">
+          <div className="rate-circle">
+            <span>{summary.collection_rate.toFixed(1)}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+### 2.5 Create Styles
+
+Create `src/components/Pledges/Pledges.css`:
+
+```css
+.pledge-management {
+  padding: 20px 0;
+}
+
+.pledge-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.summary-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.summary-card h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.summary-amount {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.summary-amount.collected {
+  color: #4ade80;
+}
+
+.summary-amount.balance {
+  color: #fbbf24;
+}
+
+.collection-rate {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.rate-circle {
+  width: 80px;
+  height: 80px;
+  border: 4px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rate-circle span {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.pledge-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 10px 15px;
+  background-color: #e5e7eb;
+  color: #1f2937;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.filter-btn.active {
+  background-color: #667eea;
+  color: white;
+}
+
+.pledges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.pledge-card {
+  border-left: 4px solid #10b981;
+}
+
+.pledge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.pledge-header h3 {
+  margin: 0;
+  color: #1f2937;
+}
+
+.pledge-type {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 5px 0 0 0;
+  text-transform: capitalize;
+}
+
+.status-badge.pledged {
+  background-color: #fef08a;
+  color: #713f12;
+}
+
+.status-badge.partial {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.paid {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.cancelled {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.pledge-amounts {
+  background-color: #f0f9ff;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.amount-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.amount-item:last-child {
+  margin-bottom: 0;
+}
+
+.amount-item .label {
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.amount-item .value {
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.amount-item .value.paid {
+  color: #10b981;
+}
+
+.amount-item .value.balance {
+  color: #f59e0b;
+}
+
+.progress-bar-container {
+  margin: 15px 0;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 25px;
+  background-color: #e5e7eb;
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 0.875rem;
+  transition: width 0.3s ease;
+}
+
+.deadline {
+  color: #f59e0b;
+  font-size: 0.875rem;
+  margin: 10px 0;
+  font-weight: 600;
+}
+
+.pledge-notes {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 10px 0;
+  font-style: italic;
+}
+
+.pledge-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.pledge-actions button {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+}
+
+.pledge-form {
+  margin-bottom: 30px;
+  border: 2px solid #dcfce7;
+}
+
+.pledge-form h3 {
+  margin-bottom: 20px;
+  color: #1f2937;
+}
+
+@media (max-width: 768px) {
+  .pledges-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .pledge-summary-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+```
+
+---
+
+## Phase 3: Add to Wedding Detail
+
+Update `src/components/Wedding/WeddingDetail.jsx` to add the Pledges tab:
+
+```javascript
+import { PledgeManagement } from '../Pledges/PledgeManagement';
+
+// Add this tab button:
+<button 
+  className={`tab-button ${activeTab === 'pledges' ? 'active' : ''}`}
+  onClick={() => setActiveTab('pledges')}
+>
+  Pledges
+</button>
+
+// Add this tab content:
+<div className={`tab-content ${activeTab === 'pledges' ? 'active' : ''}`}>
+  <PledgeManagement weddingId={id} />
+</div>
+```
+
+---
+
+## Phase 4: Payment Recording Modal
+
+Create `src/components/Pledges/PaymentModal.jsx`:
+
+```javascript
+import { useState } from 'react';
+import { pledgeAPI } from '../../services/api';
+import './Pledges.css';
+
+export const PaymentModal = ({ pledge, weddingId, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    amount: '',
+    payment_date: new Date().toISOString().split('T')[0],
+    payment_method: 'mobile_money',
+    reference_number: '',
+    notes: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate amount
+    const amount = parseFloat(formData.amount);
+    if (amount > pledge.balance) {
+      setError(`Amount cannot exceed balance of TZS ${pledge.balance.toLocaleString()}`);
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+
+    try {
+      await pledgeAPI.recordPayment(weddingId, pledge.id, {
+        ...formData,
+        amount: parseFloat(formData.amount)
+      });
+      onSuccess();
+    } catch (err) {
+      setError('Failed to record payment');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Record Payment</h3>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="modal-body">
+          <div className="payment-info">
+            <p><strong>Guest:</strong> {pledge.guest_name}</p>
+            <p><strong>Total Pledged:</strong> TZS {pledge.pledged_amount.toLocaleString()}</p>
+            <p><strong>Already Paid:</strong> TZS {pledge.paid_amount.toLocaleString()}</p>
+            <p><strong>Balance:</strong> <span className="balance-highlight">TZS {pledge.balance.toLocaleString()}</span></p>
+          </div>
+
+          {error && <div className="alert error">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Payment Amount (TZS) *</label>
+              <input
+                type="number"
+                name="amount"
+                value={formData.amount}
+                onChange={handleChange}
+                required
+                step="100"
+                max={pledge.balance}
+                placeholder={`Max: ${pledge.balance}`}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Payment Date *</label>
+              <input
+                type="date"
+                name="payment_date"
+                value={formData.payment_date}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Payment Method *</label>
+              <select name="payment_method" value={formData.payment_method} onChange={handleChange} required>
+                <option value="cash">Cash</option>
+                <option value="mobile_money">Mobile Money (M-Pesa/TigoPesa/Airtel)</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="cheque">Cheque</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Reference Number</label>
+              <input
+                type="text"
+                name="reference_number"
+                value={formData.reference_number}
+                onChange={handleChange}
+                placeholder="Transaction ID, Receipt No, etc"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Notes</label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows="3"
+                placeholder="Any additional notes..."
+              />
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="primary" disabled={loading}>
+                {loading ? 'Recording...' : 'Record Payment'}
+              </button>
+              <button type="button" className="secondary" onClick={onClose}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+Add modal styles to `src/components/Pledges/Pledges.css`:
+
+```css
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #1f2937;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+}
+
+.modal-close:hover {
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.payment-info {
+  background-color: #f0f9ff;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.payment-info p {
+  margin: 8px 0;
+  color: #1f2937;
+}
+
+.balance-highlight {
+  color: #f59e0b;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+```
+
+Update `PledgeManagement.jsx` to use the modal:
+
+```javascript
+import { PaymentModal } from './PaymentModal';
+
+// Add state for modal
+const [showPaymentModal, setShowPaymentModal] = useState(false);
+const [selectedPledge, setSelectedPledge] = useState(null);
+
+// Update the "Record Payment" button in the pledge card:
+<button 
+  className="primary" 
+  onClick={() => {
+    setSelectedPledge(pledge);
+    setShowPaymentModal(true);
+  }}
+>
+  Record Payment
+</button>
+
+// Add modal at the end of the component (before closing div):
+{showPaymentModal && selectedPledge && (
+  <PaymentModal 
+    pledge={selectedPledge}
+    weddingId={weddingId}
+    onClose={() => {
+      setShowPaymentModal(false);
+      setSelectedPledge(null);
+    }}
+    onSuccess={() => {
+      loadData();
+      setShowPaymentModal(false);
+      setSelectedPledge(null);
+    }}
+  />
+)}
+```
+
+---
+
+## Phase 5: PDF Report for Pledges
+
+Add to `weddings/pdf_service.py`:
+
+```python
+@staticmethod
+def generate_pledge_report_pdf(wedding):
+    """Generate pledge/contribution report PDF"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#667eea'),
+        spaceAfter=30,
+        alignment=TA_CENTER
+    )
+    
+    title = Paragraph(
+        f"{wedding.bride_name} & {wedding.groom_name}<br/>Pledge & Contribution Report",
+        title_style
+    )
+    elements.append(title)
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Summary
+    from .models import GuestPledge
+    pledges = GuestPledge.objects.filter(wedding=wedding)
+    
+    total_pledged = sum([float(p.pledged_amount) for p in pledges])
+    total_paid = sum([float(p.paid_amount) for p in pledges])
+    total_balance = total_pledged - total_paid
+    
+    summary = f"""
+    <b>Total Pledged:</b> TZS {total_pledged:,.0f}<br/>
+    <b>Total Collected:</b> TZS {total_paid:,.0f}<br/>
+    <b>Outstanding Balance:</b> TZS {total_balance:,.0f}<br/>
+    <b>Collection Rate:</b> {(total_paid/total_pledged*100 if total_pledged > 0 else 0):.1f}%
+    """
+    elements.append(Paragraph(summary, styles['Normal']))
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Pledge table
+    data = [['Guest Name', 'Pledged', 'Paid', 'Balance', 'Status']]
+    
+    for pledge in pledges:
+        data.append([
+            pledge.guest.name,
+            f"TZS {pledge.pledged_amount:,.0f}",
+            f"TZS {pledge.paid_amount:,.0f}",
+            f"TZS {pledge.balance:,.0f}",
+            pledge.get_payment_status_display()
+        ])
+    
+    table = Table(data, colWidths=[2*inch, 1.2*inch, 1.2*inch, 1.2*inch, 1*inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+    ]))
+    
+    elements.append(table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+```
+
+Add URL endpoint in `weddings/pdf_views.py`:
+
+```python
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_pledge_report_pdf(request, wedding_id):
+    from .pdf_service import WeddingPDFGenerator
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    buffer = WeddingPDFGenerator.generate_pledge_report_pdf(wedding)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=f'pledge_report_{wedding.id}.pdf',
+        content_type='application/pdf'
+    )
+```
+
+---
+
+## Phase 6: Setup & Testing
+
+### Run Migrations:
+```bash
+cd harusi_backend
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver
+```
+
+### Install Frontend:
+```bash
+cd harusi-frontend
+npm start
+```
+
+### Test Flow:
+1. Create a wedding
+2. Add guests
+3. Go to **Pledges** tab
+4. Click **+ Add Pledge**
+5. Select guest, enter amount
+6. Click **Record Payment** to track payments
+7. View pledge summary and progress
+
+---
+
+## Features Included:
+
+✅ **Pledge Management**
+- Record pledges with amounts
+- Track payment status (pledged/partial/paid)
+- Set payment deadlines
+- Categorize by contribution type
+
+✅ **Payment Tracking**
+- Record multiple payments per pledge
+- Track payment methods (M-Pesa, bank transfer, cash, etc)
+- Reference numbers for transactions
+- Payment history
+
+✅ **Summary Dashboard**
+- Total pledged amount
+- Total collected
+- Outstanding balance
+- Collection rate percentage
+
+✅ **Visual Progress**
+- Progress bars for each pledge
+- Status badges with colors
+- Payment filters
+
+✅ **PDF Reports**
+- Export pledge reports
+- Share with stakeholders
+
+✅ **Mobile Money Support**
+- M-Pesa, TigoPesa, Airtel Money options
+- Transaction reference tracking
+
+This complete system helps you track all guest contributions professionally! 💰✨
