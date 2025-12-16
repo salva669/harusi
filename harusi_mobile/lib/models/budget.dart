@@ -33,13 +33,13 @@ class Budget {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'wedding': weddingId,
-      'category': category,
-      'item_name': itemName,
-      'estimated_cost': estimatedCost,
-      'actual_cost': actualCost,
-      'notes': notes,
-    };
+  return {
+    // Don't send 'wedding' - it's read-only and set by backend via URL
+    'category': category,
+    'item_name': itemName,
+    'estimated_cost': estimatedCost,
+    if (actualCost != null) 'actual_cost': actualCost,
+    if (notes != null && notes!.isNotEmpty) 'notes': notes,
+  };
   }
 }
