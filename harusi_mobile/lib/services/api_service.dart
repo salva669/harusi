@@ -538,26 +538,6 @@ static Future<void> deleteVendor(int weddingId, int vendorId) async {
       throw Exception(_handleError(response));
     }
   }
-
-  // Record pledge payment
-  static Future<PledgePayment> recordPledgePayment(
-    int weddingId, 
-    int pledgeId, 
-    PledgePayment payment
-  ) async {
-    final headers = await _getHeaders();
-    final response = await http.post(
-      Uri.parse('$baseUrl/weddings/$weddingId/pledges/$pledgeId/payments/'),
-      headers: headers,
-      body: jsonEncode(payment.toJson()),
-    );
-
-    if (response.statusCode == 201) {
-      return PledgePayment.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception(_handleError(response));
-    }
-  }
   
   // ============ TIMELINE ============
 // Add these methods to your ApiService class
