@@ -5,7 +5,7 @@ class Vendor {
   final String businessName;
   final String contactPerson;
   final String phone;
-  final String email;
+  final String? email;  // ← CHANGED: Made optional
   final String? website;
   final double? quote;
   final double? depositPaid;
@@ -23,7 +23,7 @@ class Vendor {
     required this.businessName,
     required this.contactPerson,
     required this.phone,
-    required this.email,
+    this.email,  // ← CHANGED: No longer required
     this.website,
     this.quote,
     this.depositPaid,
@@ -57,19 +57,23 @@ class Vendor {
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final map = <String, dynamic>{
       'wedding': weddingId,
       'vendor_type': vendorType,
       'business_name': businessName,
       'contact_person': contactPerson,
       'phone': phone,
-      'email': email,
-      'website': website,
-      'quote': quote,
-      'deposit_paid': depositPaid,
-      'final_amount': finalAmount,
       'status': status,
-      'vendor_notes': vendorNotes,
     };
+    
+    // Only include fields if they're not null/empty
+    if (email != null && email!.isNotEmpty) map['email'] = email;
+    if (website != null && website!.isNotEmpty) map['website'] = website;
+    if (quote != null) map['quote'] = quote;
+    if (depositPaid != null) map['deposit_paid'] = depositPaid;
+    if (finalAmount != null) map['final_amount'] = finalAmount;
+    if (vendorNotes != null && vendorNotes!.isNotEmpty) map['vendor_notes'] = vendorNotes;
+    
+    return map;
   }
 }

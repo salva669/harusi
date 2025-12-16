@@ -178,7 +178,6 @@ class Timeline(models.Model):
     def __str__(self):
         return f"{self.title} - {self.date}"
 
-
 class Vendor(models.Model):
     VENDOR_TYPES = [
         ('venue', 'Venue'),
@@ -208,13 +207,13 @@ class Vendor(models.Model):
     business_name = models.CharField(max_length=200)
     contact_person = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
-    email = models.EmailField()
-    website = models.URLField(blank=True)
+    email = models.EmailField(blank=True, null=True)  # ← CHANGED: Made optional
+    website = models.URLField(blank=True, null=True)  # ← CHANGED: Added null=True
     quote = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     deposit_paid = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     final_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inquiry')
-    vendor_notes = models.TextField(blank=True)  # ← CHANGED FROM 'notes' to 'vendor_notes'
+    vendor_notes = models.TextField(blank=True, null=True)  # ← CHANGED: Added null=True
     contract_file = models.FileField(upload_to='vendor_contracts/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -224,7 +223,6 @@ class Vendor(models.Model):
     
     def __str__(self):
         return f"{self.business_name} ({self.vendor_type})"
-
 
 class VendorNote(models.Model):
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='note_entries')

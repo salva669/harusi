@@ -371,7 +371,7 @@ class _TasksScreenState extends State<TasksScreen> with SingleTickerProviderStat
     return '${months[date.month - 1]} ${date.day}';
   }
 
-  Future<void> _updateTaskStatus(Task task, String newStatus) async {
+Future<void> _updateTaskStatus(Task task, String newStatus) async {
     try {
       final updatedTask = Task(
         id: task.id,
@@ -385,7 +385,7 @@ class _TasksScreenState extends State<TasksScreen> with SingleTickerProviderStat
         cost: task.cost,
       );
 
-      await ApiService.updateTask(widget.wedding.id!, task.id!, updatedTask);
+      await ApiService.updateTask(task.weddingId!, task.id!, updatedTask);
       _loadTasks();
       
       if (mounted) {
@@ -407,7 +407,7 @@ class _TasksScreenState extends State<TasksScreen> with SingleTickerProviderStat
       }
     }
   }
-
+  
   void _showAddTaskDialog() {
     _showTaskDialog(null);
   }

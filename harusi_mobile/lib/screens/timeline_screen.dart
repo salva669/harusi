@@ -143,7 +143,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   ),
                 ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddEventDialog,
+        onPressed: () => _showEventDialog(),
         icon: const Icon(Icons.add),
         label: const Text('Add Event'),
         backgroundColor: Theme.of(context).primaryColor,
@@ -162,6 +162,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => _showEventDetails(event),
+        onLongPress: () => _showEventOptions(event),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -349,6 +350,46 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
   }
 
+  void _showEventOptions(Timeline event) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.blue),
+              title: const Text('Edit Event'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEventDialog(event: event);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                event.isCompleted ? Icons.remove_done : Icons.check,
+                color: Colors.green,
+              ),
+              title: Text(event.isCompleted ? 'Mark as Pending' : 'Mark as Complete'),
+              onTap: () {
+                Navigator.pop(context);
+                _toggleEventCompletion(event, !event.isCompleted);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete Event'),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDeleteEvent(event);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showEventDetails(Timeline event) {
     showDialog(
       context: context,
@@ -375,6 +416,13 @@ class _TimelineScreenState extends State<TimelineScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showEventDialog(event: event);
+            },
+            child: const Text('Edit'),
           ),
           if (!event.isCompleted)
             ElevatedButton(
@@ -409,47 +457,128 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Future<void> _toggleEventCompletion(Timeline event, bool isCompleted) async {
-    // TODO: Implement API call to update event completion status
-    // For now, just update locally
-    setState(() {
-      final index = _events.indexWhere((e) => e.id == event.id);
-      if (index != -1) {
-        _events[index] = Timeline(
-          id: event.id,
-          weddingId: event.weddingId,
-          eventType: event.eventType,
-          title: event.title,
-          description: event.description,
-          date: event.date,
-          time: event.time,
-          location: event.location,
-          isCompleted: isCompleted,
-          createdAt: event.createdAt,
+    try {
+      // Update local state optimistically
+      setState(() {
+        final index = _events.indexWhere((e) => e.id == event.id);
+        if (index != -1) {
+          _events[index] = event.copyWith(isCompleted: isCompleted);
+        }
+      });
+
+      // Call API to toggle (it will flip the current state)
+      await ApiService.toggleTimelineEventCompletion(
+        widget.wedding.id!,
+        event.id!,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isCompleted ? 'Event marked as complete' : 'Event marked as pending'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
-    });
+    } catch (e) {
+      // Revert local state on error
+      setState(() {
+        final index = _events.indexWhere((e) => e.id == event.id);
+        if (index != -1) {
+          _events[index] = event.copyWith(isCompleted: !isCompleted);
+        }
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating event: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(isCompleted ? 'Event marked as complete' : 'Event marked as pending'),
-        backgroundColor: Colors.green,
+  void _confirmDeleteEvent(Timeline event) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Event'),
+        content: Text('Are you sure you want to delete "${event.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteEvent(event);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }
 
-  void _showAddEventDialog() {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final locationController = TextEditingController();
-    String eventType = 'save_date';
-    DateTime? selectedDate;
+  Future<void> _deleteEvent(Timeline event) async {
+    try {
+      await ApiService.deleteTimelineEvent(widget.wedding.id!, event.id!);
+      
+      setState(() {
+        _events.removeWhere((e) => e.id == event.id);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Event deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting event: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEventDialog({Timeline? event}) {
+    final isEditing = event != null;
+    final titleController = TextEditingController(text: event?.title);
+    final descriptionController = TextEditingController(text: event?.description);
+    final locationController = TextEditingController(text: event?.location);
+    String eventType = event?.eventType ?? 'save_date';
+    DateTime? selectedDate = event?.date;
     TimeOfDay? selectedTime;
+    
+    // Parse existing time if available
+    if (event?.time != null && event!.time!.isNotEmpty) {
+      try {
+        final parts = event.time!.split(':');
+        selectedTime = TimeOfDay(
+          hour: int.parse(parts[0]),
+          minute: int.parse(parts[1]),
+        );
+      } catch (e) {
+        // Ignore parse error
+      }
+    }
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Timeline Event'),
+          title: Text(isEditing ? 'Edit Timeline Event' : 'Add Timeline Event'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -497,7 +626,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: context,
-                      initialDate: DateTime.now(),
+                      initialDate: selectedDate ?? DateTime.now(),
                       firstDate: DateTime.now().subtract(const Duration(days: 365)),
                       lastDate: DateTime.now().add(const Duration(days: 730)),
                     );
@@ -524,7 +653,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   onTap: () async {
                     final picked = await showTimePicker(
                       context: context,
-                      initialTime: TimeOfDay.now(),
+                      initialTime: selectedTime ?? TimeOfDay.now(),
                     );
                     if (picked != null) {
                       setDialogState(() => selectedTime = picked);
@@ -572,6 +701,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
                 try {
                   final timelineData = Timeline(
+                    id: event?.id,
                     weddingId: widget.wedding.id!,
                     eventType: eventType,
                     title: titleController.text.trim(),
@@ -585,17 +715,32 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     location: locationController.text.trim().isNotEmpty
                         ? locationController.text.trim()
                         : null,
-                    isCompleted: false,
+                    isCompleted: event?.isCompleted ?? false,
+                    createdAt: event?.createdAt,
                   );
 
-                  await ApiService.createTimelineEvent(widget.wedding.id!, timelineData);
+                  if (isEditing) {
+                    await ApiService.updateTimelineEvent(
+                      widget.wedding.id!,
+                      event.id!,
+                      timelineData,
+                    );
+                  } else {
+                    await ApiService.createTimelineEvent(
+                      widget.wedding.id!,
+                      timelineData,
+                    );
+                  }
+
                   Navigator.pop(context);
                   _loadEvents();
 
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Event added successfully'),
+                      SnackBar(
+                        content: Text(isEditing 
+                          ? 'Event updated successfully' 
+                          : 'Event added successfully'),
                         backgroundColor: Colors.green,
                       ),
                     );
@@ -609,7 +754,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   );
                 }
               },
-              child: const Text('Add'),
+              child: Text(isEditing ? 'Update' : 'Add'),
             ),
           ],
         ),

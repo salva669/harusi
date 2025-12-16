@@ -144,8 +144,38 @@ class _BudgetScreenState extends State<BudgetScreen> {
               Text('Act: TZS ${item.actualCost!.toStringAsFixed(0)}', style: const TextStyle(color: Colors.red)),
           ],
         ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _showEditBudgetDialog(item),
+        trailing: PopupMenuButton(
+          icon: const Icon(Icons.more_vert),
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'edit',
+              child: Row(
+                children: [
+                  Icon(Icons.edit, size: 20),
+                  SizedBox(width: 8),
+                  Text('Edit'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete, size: 20, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+          onSelected: (value) {
+            if (value == 'edit') {
+              _showEditBudgetDialog(item);
+            } else if (value == 'delete') {
+              _deleteBudgetItem(item);
+            }
+          },
+        ),
       ),
     );
   }
@@ -243,7 +273,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
                   );
 
-                  await ApiService.createBudgetItem(widget.wedding.id!, budgetData);
+                  // FIX: Check if editing or creating
+                  if (isEdit) {
+                    await ApiService.updateBudgetItem(widget.wedding.id!, item!.id!, budgetData);
+                  } else {
+                    await ApiService.createBudgetItem(widget.wedding.id!, budgetData);
+                  }
+                  
                   Navigator.pop(context);
                   _loadBudgetItems();
                   
@@ -267,5 +303,50 @@ class _BudgetScreenState extends State<BudgetScreen> {
         ),
       ),
     );
+  }
+  // ignore: unused_element
+  Future<void> _deleteBudgetItem(Budget item) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Budget Item'),
+        content: Text('Are you sure you want to delete "${item.itemName}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && item.id != null) {
+      try {
+        await ApiService.deleteBudgetItem(widget.wedding.id!, item.id!);
+        _loadBudgetItems();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Budget item deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 }

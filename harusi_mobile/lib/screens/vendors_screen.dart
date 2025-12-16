@@ -54,11 +54,6 @@ class _VendorsScreenState extends State<VendorsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final grouped = <String, List<Vendor>>{};
-    for (var vendor in _vendors) {
-      grouped.putIfAbsent(vendor.vendorType, () => []).add(vendor);
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vendors'),
@@ -144,7 +139,8 @@ class _VendorsScreenState extends State<VendorsScreen> {
               _buildDetailRow('Type', vendor.vendorType),
               _buildDetailRow('Contact', vendor.contactPerson),
               _buildDetailRow('Phone', vendor.phone),
-              _buildDetailRow('Email', vendor.email),
+              if (vendor.email != null && vendor.email!.isNotEmpty) 
+                _buildDetailRow('Email', vendor.email!),
               if (vendor.website != null) _buildDetailRow('Website', vendor.website!),
               if (vendor.quote != null) _buildDetailRow('Quote', 'TZS ${vendor.quote!.toStringAsFixed(0)}'),
               if (vendor.depositPaid != null) _buildDetailRow('Deposit', 'TZS ${vendor.depositPaid!.toStringAsFixed(0)}'),
@@ -154,13 +150,20 @@ class _VendorsScreenState extends State<VendorsScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _showVendorDialog(vendor);
             },
             child: const Text('Edit'),
+          ),
+          TextButton(
+            onPressed: () => _confirmDeleteVendor(vendor),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -175,6 +178,50 @@ class _VendorsScreenState extends State<VendorsScreen> {
         children: [
           SizedBox(width: 80, child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.bold))),
           Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteVendor(Vendor vendor) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Vendor'),
+        content: Text('Are you sure you want to delete ${vendor.businessName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close confirmation dialog
+              Navigator.pop(context); // Close vendor details dialog
+              
+              try {
+                await ApiService.deleteVendor(widget.wedding.id!, vendor.id!);
+                _loadVendors();
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Vendor deleted'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );
@@ -241,7 +288,10 @@ class _VendorsScreenState extends State<VendorsScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: emailController,
-                  decoration: const InputDecoration(labelText: 'Email *', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                    labelText: 'Email',  // ← CHANGED: Removed asterisk
+                    border: OutlineInputBorder(),
+                  ),
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
@@ -283,10 +333,10 @@ class _VendorsScreenState extends State<VendorsScreen> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () async {
+                // ← CHANGED: Removed email validation
                 if (businessController.text.trim().isEmpty ||
                     contactController.text.trim().isEmpty ||
-                    phoneController.text.trim().isEmpty ||
-                    emailController.text.trim().isEmpty) {
+                    phoneController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Please fill required fields')),
                   );
@@ -301,14 +351,20 @@ class _VendorsScreenState extends State<VendorsScreen> {
                     businessName: businessController.text.trim(),
                     contactPerson: contactController.text.trim(),
                     phone: phoneController.text.trim(),
-                    email: emailController.text.trim(),
+                    email: emailController.text.trim().isNotEmpty ? emailController.text.trim() : null,
                     website: websiteController.text.trim().isNotEmpty ? websiteController.text.trim() : null,
                     quote: quoteController.text.isNotEmpty ? double.parse(quoteController.text) : null,
                     status: status,
                     vendorNotes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
                   );
 
-                  await ApiService.createVendor(widget.wedding.id!, vendorData);
+                  // ← CHANGED: Use different API calls for create vs update
+                  if (isEdit && vendor!.id != null) {
+                    await ApiService.updateVendor(widget.wedding.id!, vendor.id!, vendorData);
+                  } else {
+                    await ApiService.createVendor(widget.wedding.id!, vendorData);
+                  }
+                  
                   Navigator.pop(context);
                   _loadVendors();
                   
