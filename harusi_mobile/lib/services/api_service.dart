@@ -9,6 +9,8 @@ import '../models/vendor.dart';
 import '../models/guest_pledge.dart';
 import '../models/timeline.dart';
 import '../models/pledge_payment.dart';
+import '../models/wedding_analytics.dart';
+import '../models/pledge_summary.dart';
 
 class ApiService {
   // IMPORTANT: Change these based on your environment
@@ -449,63 +451,65 @@ static Future<Task> createTask(int weddingId, Task task) async {
       throw Exception(_handleError(response));
     }
   }
+  
   // ============ VENDORS ============
+  
   static Future<List<Vendor>> getVendors(int weddingId) async {
-  final headers = await _getHeaders();
-  final response = await http.get(
-    Uri.parse('$baseUrl/weddings/$weddingId/vendors/'),
-    headers: headers,
-  );
-  
-  if (response.statusCode == 200) {
-    final List data = jsonDecode(response.body);
-    return data.map((json) => Vendor.fromJson(json)).toList();
-  } else {
-    throw Exception(_handleError(response));
+    final headers = await _getHeaders();
+    final response = await http.get(
+      Uri.parse('$baseUrl/weddings/$weddingId/vendors/'),
+      headers: headers,
+    );
+    
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.map((json) => Vendor.fromJson(json)).toList();
+    } else {
+      throw Exception(_handleError(response));
+    }
   }
-}
 
-static Future<Vendor> createVendor(int weddingId, Vendor vendor) async {
-  final headers = await _getHeaders();
-  final response = await http.post(
-    Uri.parse('$baseUrl/weddings/$weddingId/vendors/'),
-    headers: headers,
-    body: jsonEncode(vendor.toJson()),
-  );
-  
-  if (response.statusCode == 201) {
-    return Vendor.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception(_handleError(response));
+  static Future<Vendor> createVendor(int weddingId, Vendor vendor) async {
+    final headers = await _getHeaders();
+    final response = await http.post(
+      Uri.parse('$baseUrl/weddings/$weddingId/vendors/'),
+      headers: headers,
+      body: jsonEncode(vendor.toJson()),
+    );
+    
+    if (response.statusCode == 201) {
+      return Vendor.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception(_handleError(response));
+    }
   }
-}
 
-static Future<Vendor> updateVendor(int weddingId, int vendorId, Vendor vendor) async {
-  final headers = await _getHeaders();
-  final response = await http.put(
-    Uri.parse('$baseUrl/weddings/$weddingId/vendors/$vendorId/'),
-    headers: headers,
-    body: jsonEncode(vendor.toJson()),
-  );
-  
-  if (response.statusCode == 200) {
-    return Vendor.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception(_handleError(response));
+  static Future<Vendor> updateVendor(int weddingId, int vendorId, Vendor vendor) async {
+    final headers = await _getHeaders();
+    final response = await http.put(
+      Uri.parse('$baseUrl/weddings/$weddingId/vendors/$vendorId/'),
+      headers: headers,
+      body: jsonEncode(vendor.toJson()),
+    );
+    
+    if (response.statusCode == 200) {
+      return Vendor.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception(_handleError(response));
+    }
   }
-}
 
-static Future<void> deleteVendor(int weddingId, int vendorId) async {
-  final headers = await _getHeaders();
-  final response = await http.delete(
-    Uri.parse('$baseUrl/weddings/$weddingId/vendors/$vendorId/'),
-    headers: headers,
-  );
-  
-  if (response.statusCode != 204 && response.statusCode != 200) {
-    throw Exception(_handleError(response));
+  static Future<void> deleteVendor(int weddingId, int vendorId) async {
+    final headers = await _getHeaders();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/weddings/$weddingId/vendors/$vendorId/'),
+      headers: headers,
+    );
+    
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception(_handleError(response));
+    }
   }
-}
   
   // ============ GUEST PLEDGES ============
   
@@ -560,74 +564,127 @@ static Future<void> deleteVendor(int weddingId, int vendorId) async {
   }
   
   // ============ TIMELINE ============
-// Add these methods to your ApiService class
-
-static Future<List<Timeline>> getTimelineEvents(int weddingId) async {
-  final headers = await _getHeaders();
-  final response = await http.get(
-    Uri.parse('$baseUrl/weddings/$weddingId/timeline/'),
-    headers: headers,
-  );
   
-  if (response.statusCode == 200) {
-    final List data = jsonDecode(response.body);
-    return data.map((json) => Timeline.fromJson(json)).toList();
-  } else {
-    throw Exception(_handleError(response));
+  static Future<List<Timeline>> getTimelineEvents(int weddingId) async {
+    final headers = await _getHeaders();
+    final response = await http.get(
+      Uri.parse('$baseUrl/weddings/$weddingId/timeline/'),
+      headers: headers,
+    );
+    
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.map((json) => Timeline.fromJson(json)).toList();
+    } else {
+      throw Exception(_handleError(response));
+    }
   }
-}
 
-static Future<Timeline> createTimelineEvent(int weddingId, Timeline timeline) async {
-  final headers = await _getHeaders();
-  final response = await http.post(
-    Uri.parse('$baseUrl/weddings/$weddingId/timeline/'),
-    headers: headers,
-    body: jsonEncode(timeline.toJson()),
-  );
-  
-  if (response.statusCode == 201) {
-    return Timeline.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception(_handleError(response));
+  static Future<Timeline> createTimelineEvent(int weddingId, Timeline timeline) async {
+    final headers = await _getHeaders();
+    final response = await http.post(
+      Uri.parse('$baseUrl/weddings/$weddingId/timeline/'),
+      headers: headers,
+      body: jsonEncode(timeline.toJson()),
+    );
+    
+    if (response.statusCode == 201) {
+      return Timeline.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception(_handleError(response));
+    }
   }
-}
 
-static Future<Timeline> updateTimelineEvent(int weddingId, int eventId, Timeline timeline) async {
-  final headers = await _getHeaders();
-  final response = await http.put(
-    Uri.parse('$baseUrl/weddings/$weddingId/timeline/$eventId/'),
-    headers: headers,
-    body: jsonEncode(timeline.toJson()),
-  );
-  
-  if (response.statusCode == 200) {
-    return Timeline.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception(_handleError(response));
+  static Future<Timeline> updateTimelineEvent(int weddingId, int eventId, Timeline timeline) async {
+    final headers = await _getHeaders();
+    final response = await http.put(
+      Uri.parse('$baseUrl/weddings/$weddingId/timeline/$eventId/'),
+      headers: headers,
+      body: jsonEncode(timeline.toJson()),
+    );
+    
+    if (response.statusCode == 200) {
+      return Timeline.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception(_handleError(response));
+    }
   }
-}
 
-static Future<void> deleteTimelineEvent(int weddingId, int eventId) async {
-  final headers = await _getHeaders();
-  final response = await http.delete(
-    Uri.parse('$baseUrl/weddings/$weddingId/timeline/$eventId/'),
-    headers: headers,
-  );
-  
-  if (response.statusCode != 204 && response.statusCode != 200) {
-    throw Exception(_handleError(response));
+  static Future<void> deleteTimelineEvent(int weddingId, int eventId) async {
+    final headers = await _getHeaders();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/weddings/$weddingId/timeline/$eventId/'),
+      headers: headers,
+    );
+    
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception(_handleError(response));
+    }
   }
-}
 
-static Future<void> toggleTimelineEventCompletion(int weddingId, int eventId) async {
-  final headers = await _getHeaders();
-  final response = await http.post(
-    Uri.parse('$baseUrl/weddings/$weddingId/timeline/$eventId/toggle_completed/'),
-    headers: headers,
-  );
-  
-  if (response.statusCode != 200) {
-    throw Exception(_handleError(response));
+  static Future<void> toggleTimelineEventCompletion(int weddingId, int eventId) async {
+    final headers = await _getHeaders();
+    final response = await http.post(
+      Uri.parse('$baseUrl/weddings/$weddingId/timeline/$eventId/toggle_completed/'),
+      headers: headers,
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception(_handleError(response));
+    }
   }
-}
+  
+  // ============ ANALYTICS ============
+  
+  /// Get wedding analytics data
+  static Future<WeddingAnalytics> getWeddingAnalytics(int weddingId) async {
+    final headers = await _getHeaders();
+    final response = await http.get(
+      Uri.parse('$baseUrl/weddings/$weddingId/analytics/'),
+      headers: headers,
+    );
+    
+    print('Analytics response status: ${response.statusCode}');
+    print('Analytics response body: ${response.body}');
+    
+    if (response.statusCode == 200) {
+      return WeddingAnalytics.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception(_handleError(response));
+    }
+  }
+  
+  /// Get pledge summary for a wedding
+  static Future<PledgeSummary> getPledgeSummary(int weddingId) async {
+    final headers = await _getHeaders();
+    final response = await http.get(
+      Uri.parse('$baseUrl/weddings/$weddingId/pledges/summary/'),
+      headers: headers,
+    );
+    
+    print('Pledge summary response status: ${response.statusCode}');
+    print('Pledge summary response body: ${response.body}');
+    
+    if (response.statusCode == 200) {
+      return PledgeSummary.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception(_handleError(response));
+    }
+  }
+  
+  /// Refresh/recalculate analytics for a wedding
+  /// This can be called after making changes to trigger analytics update
+  static Future<WeddingAnalytics> refreshAnalytics(int weddingId) async {
+    final headers = await _getHeaders();
+    final response = await http.post(
+      Uri.parse('$baseUrl/weddings/$weddingId/analytics/refresh/'),
+      headers: headers,
+    );
+    
+    if (response.statusCode == 200) {
+      return WeddingAnalytics.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception(_handleError(response));
+    }
+  }
 }
