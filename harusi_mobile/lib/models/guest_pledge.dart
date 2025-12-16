@@ -48,15 +48,28 @@ class GuestPledge {
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = <String, dynamic>{
       'guest': guestId,
       'wedding': weddingId,
       'pledged_amount': pledgedAmount,
       'paid_amount': paidAmount,
-      'payment_method': paymentMethod,
-      'pledge_date': pledgeDate.toIso8601String().split('T')[0],
-      'payment_deadline': paymentDeadline?.toIso8601String().split('T')[0],
-      'notes': notes,
     };
+    
+    // Only add optional fields if they have values
+    if (paymentMethod != null && paymentMethod!.isNotEmpty) {
+      json['payment_method'] = paymentMethod;
+    }
+    
+    if (paymentDeadline != null) {
+      json['payment_deadline'] = paymentDeadline!.toIso8601String().split('T')[0];
+    }
+    
+    if (notes != null && notes!.isNotEmpty) {
+      json['notes'] = notes;
+    }
+    
+    // DON'T send pledge_date - Django auto-generates it with auto_now_add=True
+    
+    return json;
   }
 }
