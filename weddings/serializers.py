@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
     Wedding, Guest, Task, Budget, PhotoGallery, Photo,
-    Timeline, Vendor, VendorNote, InvitationTemplate, GuestPledge, PledgePayment
+    Timeline, Vendor, VendorNote, InvitationTemplate, GuestPledge, PledgePayment,
+    WeddingAnalytics, WeeklyAnalyticsSnapshot, GuestEngagementMetrics
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -126,3 +127,44 @@ class GuestPledgeSerializer(serializers.ModelSerializer):
                   'pledge_date', 'payment_deadline', 'notes', 'payments', 'payment_progress',
                   'created_at', 'updated_at']
         read_only_fields = ['id', 'balance', 'payment_status', 'created_at', 'updated_at', 'wedding']
+
+class WeddingAnalyticsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WeddingAnalytics
+        fields = [
+            'total_invitations_sent',
+            'total_confirmed',
+            'total_pending',
+            'total_declined',
+            'average_guests_per_invitation',
+            'total_estimated_budget',
+            'total_actual_spending',
+            'budget_variance',
+            'budget_category_breakdown',
+            'total_tasks',
+            'completed_tasks',
+            'pending_tasks',
+            'overdue_tasks',
+            'completion_percentage',
+            'total_vendors',
+            'vendors_booked',
+            'average_vendor_quote',
+            'total_vendor_cost',
+            'days_until_wedding',
+            'weeks_until_wedding',
+            'planning_health_score',
+            'budget_health_score',
+            'task_health_score',
+            'guest_health_score',
+            'overall_health_score',
+        ]
+
+class WeeklyAnalyticsSnapshotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WeeklyAnalyticsSnapshot
+        fields = '__all__'
+
+class GuestEngagementMetricsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GuestEngagementMetrics
+        fields = '__all__'

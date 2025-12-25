@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from .email_service import WeddingEmailService
 from .models import Guest, InvitationTemplate, Vendor
 from rest_framework.routers import DefaultRouter
+from . import analytics_views
 from .views import (
     WeddingViewSet, GuestViewSet, TaskViewSet, BudgetViewSet,
     PhotoGalleryViewSet, PhotoViewSet, TimelineViewSet,
@@ -114,4 +115,15 @@ urlpatterns = [
     path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/', PledgePaymentViewSet.as_view({'get': 'list', 'post': 'create'}), name='payment-list'),
     path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/<int:pk>/', PledgePaymentViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='payment-detail'),
 
+    # Analytics
+    path('weddings/<int:wedding_id>/analytics/', analytics_views.wedding_analytics, name='wedding-analytics'),
+    path('weddings/<int:wedding_id>/pledges/summary/', analytics_views.pledge_summary, name='pledge-summary'),
+    
+    path('weddings/<int:wedding_id>/analytics/detailed/', analytics_views.get_analytics, name='get-analytics'),
+    path('weddings/<int:wedding_id>/analytics/trends/', analytics_views.get_trend_data, name='trend-data'),
+    path('weddings/<int:wedding_id>/analytics/snapshot/', analytics_views.create_snapshot, name='create-snapshot'),
+    path('weddings/<int:wedding_id>/analytics/budget-breakdown/', analytics_views.get_category_breakdown, name='category-breakdown'),
+    path('weddings/<int:wedding_id>/analytics/timeline/', analytics_views.get_timeline_status, name='timeline-status'),
+    path('weddings/<int:wedding_id>/analytics/guests/', analytics_views.get_guest_analytics, name='guest-analytics'),
+    path('weddings/<int:wedding_id>/analytics/health/', analytics_views.get_health_scores, name='health-scores'),
 ]

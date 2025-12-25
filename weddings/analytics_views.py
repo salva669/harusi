@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .models import Wedding
+from .models import Wedding, GuestPledge
 from .models import (
     WeddingAnalytics, WeeklyAnalyticsSnapshot, GuestEngagementMetrics
 )
@@ -11,6 +11,84 @@ from .analytics_serializers import (
     GuestEngagementMetricsSerializer
 )
 from .analytics_service import WeddingAnalyticsService
+
+# ============================================
+# MAIN ENDPOINT - This is what Flutter calls
+# ============================================
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def wedding_analytics(request, wedding_id):
+    """
+    Main analytics endpoint that Flutter app calls
+    Endpoint: /api/weddings/<id>/analytics/
+    """
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    
+    # Calculate fresh analytics
+    analytics = WeddingAnalyticsService.calculate_analytics(wedding)
+    
+    # Return data in format Flutter expects
+    return Response({
+        'total_invitations_sent': analytics.total_invitations_sent,
+        'total_confirmed': analytics.total_confirmed,
+        'total_pending': analytics.total_pending,
+        'total_declined': analytics.total_declined,
+        'average_guests_per_invitation': float(analytics.average_guests_per_invitation),
+        'total_estimated_budget': str(analytics.total_estimated_budget),
+        'total_actual_spending': str(analytics.total_actual_spending),
+        'budget_variance': str(analytics.budget_variance),
+        'budget_category_breakdown': analytics.budget_category_breakdown,
+        'total_tasks': analytics.total_tasks,
+        'completed_tasks': analytics.completed_tasks,
+        'pending_tasks': analytics.pending_tasks,
+        'overdue_tasks': analytics.overdue_tasks,
+        'completion_percentage': float(analytics.completion_percentage),
+        'total_vendors': analytics.total_vendors,
+        'vendors_booked': analytics.vendors_booked,
+        'average_vendor_quote': str(analytics.average_vendor_quote),
+        'total_vendor_cost': str(analytics.total_vendor_cost),
+        'days_until_wedding': analytics.days_until_wedding,
+        'weeks_until_wedding': analytics.weeks_until_wedding,
+        'planning_health_score': float(analytics.planning_health_score),
+        'budget_health_score': float(analytics.budget_health_score),
+        'task_health_score': float(analytics.task_health_score),
+        'guest_health_score': float(analytics.guest_health_score),
+        'overall_health_score': float(analytics.overall_health_score),
+    })
+
+
+# ============================================
+# PLEDGE SUMMARY ENDPOINT
+# ============================================
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pledge_summary(request, wedding_id):
+    """
+    Pledge summary endpoint
+    Endpoint: /api/weddings/<id>/pledges/summary/
+    """
+    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+    pledges = wedding.pledges.all()
+    
+    from decimal import Decimal
+    total_pledged = sum(p.pledged_amount for p in pledges) or Decimal(0)
+    total_paid = sum(p.paid_amount for p in pledges) or Decimal(0)
+    total_balance = sum(p.balance for p in pledges) or Decimal(0)
+    
+    return Response({
+        'total_pledged': str(total_pledged),
+        'total_paid': str(total_paid),
+        'total_balance': str(total_balance),
+        'total_pledgers': pledges.count(),
+        'fully_paid_count': pledges.filter(payment_status='paid').count(),
+        'partially_paid_count': pledges.filter(payment_status='partial').count(),
+        'unpaid_count': pledges.filter(payment_status='pledged').count(),
+    })
+
+
+# ============================================
+# OTHER ANALYTICS ENDPOINTS (Optional)
+# ============================================
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

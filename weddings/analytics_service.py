@@ -1,6 +1,7 @@
 from datetime import datetime, date, timedelta
 from django.utils import timezone
 from decimal import Decimal
+from django.db.models import Avg
 from .models import (
     Wedding, Guest, Task, Vendor, Budget, 
     WeddingAnalytics, WeeklyAnalyticsSnapshot, GuestEngagementMetrics
@@ -46,7 +47,7 @@ class WeddingAnalyticsService:
         
         if guests.count() > 0:
             analytics.average_guests_per_invitation = guests.aggregate(
-                avg=models.Avg('number_of_guests')
+            avg=Avg('number_of_guests')
             )['avg'] or 1.0
     
     @staticmethod
