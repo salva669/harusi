@@ -13,12 +13,11 @@ import '../widgets/budget_breakdown_card.dart';
 
 class WeddingDashboardScreen extends StatefulWidget {
   final int weddingId;
-  final ApiService apiService;
 
+  // ✅ ONLY weddingId parameter - NO apiService parameter
   const WeddingDashboardScreen({
     Key? key,
     required this.weddingId,
-    required this.apiService,
   }) : super(key: key);
 
   @override
@@ -37,6 +36,8 @@ class _WeddingDashboardScreenState extends State<WeddingDashboardScreen> {
     fetchData();
   }
 
+  /// Fetch analytics data from the API
+  /// All ApiService methods are STATIC, so call them directly on the class
   Future<void> fetchData() async {
     setState(() {
       isLoading = true;
@@ -44,7 +45,7 @@ class _WeddingDashboardScreenState extends State<WeddingDashboardScreen> {
     });
 
     try {
-       print('Fetching analytics for wedding ${widget.weddingId}...');
+      print('Fetching analytics for wedding ${widget.weddingId}...');
       
       // ✅ CORRECT: Call static methods directly on the class
       final analyticsData = await ApiService.getWeddingAnalytics(widget.weddingId);
@@ -59,10 +60,26 @@ class _WeddingDashboardScreenState extends State<WeddingDashboardScreen> {
         isLoading = false;
       });
     } catch (e) {
+      print('Dashboard error: $e');
       setState(() {
         error = e.toString();
         isLoading = false;
       });
+      
+      // Show error snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load dashboard: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: fetchData,
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -77,56 +94,122 @@ class _WeddingDashboardScreenState extends State<WeddingDashboardScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: fetchData,
+            tooltip: 'Refresh Dashboard',
           ),
         ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                      const SizedBox(height: 16),
-                      Text('Error: $error'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: fetchData,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: fetchData,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CountdownCard(analytics: analytics!),
-                        const SizedBox(height: 16),
-                        HealthScoresCard(analytics: analytics!),
-                        const SizedBox(height: 16),
-                        GuestAnalyticsCard(analytics: analytics!),
-                        const SizedBox(height: 16),
-                        BudgetCard(analytics: analytics!),
-                        const SizedBox(height: 16),
-                        if (pledgeSummary != null) ...[
-                          PledgeSummaryCard(pledgeSummary: pledgeSummary!),
-                          const SizedBox(height: 16),
-                        ],
-                        TaskProgressCard(analytics: analytics!),
-                        const SizedBox(height: 16),
-                        VendorStatusCard(analytics: analytics!),
-                        const SizedBox(height: 16),
-                        BudgetBreakdownCard(analytics: analytics!),
-                      ],
-                    ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Loading dashboard...',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+              const SizedBox(height: 16),
+              Text(
+                'Oops! Something went wrong',
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: fetchData,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.pink[400],
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (analytics == null) {
+      return const Center(
+        child: Text('No analytics data available'),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: fetchData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Countdown Card
+            CountdownCard(analytics: analytics!),
+            const SizedBox(height: 16),
+
+            // Health Scores
+            HealthScoresCard(analytics: analytics!),
+            const SizedBox(height: 16),
+
+            // Guest Analytics
+            GuestAnalyticsCard(analytics: analytics!),
+            const SizedBox(height: 16),
+
+            // Budget Overview
+            BudgetCard(analytics: analytics!),
+            const SizedBox(height: 16),
+
+            // Pledge Summary (if available)
+            if (pledgeSummary != null) ...[
+              PledgeSummaryCard(pledgeSummary: pledgeSummary!),
+              const SizedBox(height: 16),
+            ],
+
+            // Task Progress
+            TaskProgressCard(analytics: analytics!),
+            const SizedBox(height: 16),
+
+            // Vendor Status
+            VendorStatusCard(analytics: analytics!),
+            const SizedBox(height: 16),
+
+            // Budget Breakdown
+            BudgetBreakdownCard(analytics: analytics!),
+            
+            // Bottom padding
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
     );
   }
 }

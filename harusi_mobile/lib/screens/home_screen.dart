@@ -7,6 +7,7 @@ import 'tasks_screen.dart';
 import 'budget_screen.dart';
 import 'vendors_screen.dart';
 import 'timeline_screen.dart';
+import 'wedding_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final int userId;
@@ -52,6 +53,31 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  // ✅ NEW: Helper method for safe navigation to Analytics Dashboard
+  void _navigateToAnalyticsDashboard() {
+    // Check if wedding exists and has a valid ID
+    if (_currentWedding == null || _currentWedding!.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a wedding first'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    
+    // Navigate to dashboard
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WeddingDashboardScreen(
+          weddingId: _currentWedding!.id!, // ✅ Safe to use double bang here
+        ),
+      ),
+    );
   }
 
   int _daysUntilWedding() {
@@ -191,7 +217,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 );
                 
-                // If a wedding was created, reload the weddings
                 if (result != null) {
                   _loadWedding();
                 }
@@ -235,35 +260,54 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${_currentWedding!.brideName} & ${_currentWedding!.groomName}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(Icons.location_on, color: Colors.white70, size: 16),
-                      const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          _currentWedding!.venue,
-                          style: const TextStyle(color: Colors.white70),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${_currentWedding!.brideName} & ${_currentWedding!.groomName}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on, color: Colors.white70, size: 16),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    _currentWedding!.venue,
+                                    style: const TextStyle(color: Colors.white70),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today, color: Colors.white70, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _formatDate(_currentWedding!.weddingDate),
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today, color: Colors.white70, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        _formatDate(_currentWedding!.weddingDate),
-                        style: const TextStyle(color: Colors.white70),
+                      // ✅ FIXED: Analytics Quick Access Button
+                      IconButton(
+                        onPressed: _navigateToAnalyticsDashboard,
+                        icon: const Icon(Icons.analytics, color: Colors.white),
+                        iconSize: 32,
+                        tooltip: 'View Analytics',
                       ),
                     ],
                   ),
@@ -363,6 +407,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisSpacing: 12,
                     childAspectRatio: 1.3,
                     children: [
+                      // ✅ FIXED: Analytics card
+                      _buildQuickActionCard(
+                        'Analytics',
+                        Icons.analytics,
+                        Colors.purple,
+                        _navigateToAnalyticsDashboard,
+                      ),
                       _buildQuickActionCard(
                         'Guests',
                         Icons.people,
@@ -405,7 +456,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildQuickActionCard(
                         'Vendors',
                         Icons.business,
-                        Colors.purple,
+                        Colors.teal,
                         () {
                           Navigator.push(
                             context,
@@ -418,23 +469,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildQuickActionCard(
                         'Timeline',
                         Icons.event_note,
-                        Colors.teal,
+                        Colors.indigo,
                         () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => TimelineScreen(wedding: _currentWedding!),
                             ),
-                          );
-                        },
-                      ),
-                      _buildQuickActionCard(
-                        'Gallery',
-                        Icons.photo_library,
-                        Colors.pink,
-                        () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Gallery - Coming Soon')),
                           );
                         },
                       ),
@@ -487,7 +528,11 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           DrawerHeader(
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
+              gradient: LinearGradient(
+                colors: [Colors.pink[400]!, Colors.purple[400]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -496,37 +541,146 @@ class _HomeScreenState extends State<HomeScreen> {
                 const CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 35, color: Colors.pink),
+                  child: Icon(Icons.favorite, color: Colors.pink, size: 30),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   _currentWedding != null
                       ? '${_currentWedding!.brideName} & ${_currentWedding!.groomName}'
-                      : 'Harusi Mobile',
+                      : 'Wedding Planner',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  _currentWedding != null
+                      ? 'Wedding: ${_formatDate(_currentWedding!.weddingDate)}'
+                      : 'Plan your special day',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
           ),
+          
+          // Home - Default landing page with overview
           ListTile(
-            leading: const Icon(Icons.dashboard),
-            title: const Text('Dashboard'),
+            leading: const Icon(Icons.home, color: Colors.pink),
+            title: const Text('Home'),
+            subtitle: const Text('Overview & Quick Actions'),
+            selected: true,
             onTap: () => Navigator.pop(context),
           ),
+          
+          const Divider(),
+          
+          // ✅ FIXED: Analytics Dashboard
           ListTile(
-            leading: const Icon(Icons.favorite),
-            title: const Text('My Weddings'),
+            leading: const Icon(Icons.analytics, color: Colors.purple),
+            title: const Text('Analytics Dashboard'),
+            subtitle: const Text('Detailed insights & reports'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            enabled: _currentWedding != null && _currentWedding!.id != null,
             onTap: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('My Weddings - Coming Soon')),
-              );
+              _navigateToAnalyticsDashboard();
             },
           ),
+          
+          const Divider(),
+          
+          // Other menu items
+          ListTile(
+            leading: const Icon(Icons.people),
+            title: const Text('Guests'),
+            enabled: _currentWedding != null,
+            onTap: () {
+              Navigator.pop(context);
+              if (_currentWedding != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GuestsScreen(wedding: _currentWedding!),
+                  ),
+                );
+              }
+            },
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.attach_money),
+            title: const Text('Budget'),
+            enabled: _currentWedding != null,
+            onTap: () {
+              Navigator.pop(context);
+              if (_currentWedding != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BudgetScreen(wedding: _currentWedding!),
+                  ),
+                );
+              }
+            },
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.assignment),
+            title: const Text('Tasks'),
+            enabled: _currentWedding != null,
+            onTap: () {
+              Navigator.pop(context);
+              if (_currentWedding != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TasksScreen(wedding: _currentWedding!),
+                  ),
+                );
+              }
+            },
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.business),
+            title: const Text('Vendors'),
+            enabled: _currentWedding != null,
+            onTap: () {
+              Navigator.pop(context);
+              if (_currentWedding != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VendorsScreen(wedding: _currentWedding!),
+                  ),
+                );
+              }
+            },
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.timeline),
+            title: const Text('Timeline'),
+            enabled: _currentWedding != null,
+            onTap: () {
+              Navigator.pop(context);
+              if (_currentWedding != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TimelineScreen(wedding: _currentWedding!),
+                  ),
+                );
+              }
+            },
+          ),
+          
           ListTile(
             leading: const Icon(Icons.add_circle_outline),
             title: const Text('Create New Wedding'),
@@ -544,7 +698,9 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
           ),
+          
           const Divider(),
+          
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
@@ -555,6 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+          
           ListTile(
             leading: const Icon(Icons.help_outline),
             title: const Text('Help & Support'),
@@ -565,13 +722,37 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+          
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
             onTap: () async {
-              await ApiService.logout();
-              if (mounted) {
-                Navigator.of(context).pushReplacementNamed('/login');
+              Navigator.pop(context);
+              
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Logout'),
+                  content: const Text('Are you sure you want to logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              );
+              
+              if (confirm == true) {
+                await ApiService.logout();
+                if (mounted) {
+                  Navigator.of(context).pushReplacementNamed('/login');
+                }
               }
             },
           ),
