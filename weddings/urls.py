@@ -1,10 +1,12 @@
 from django.urls import path, include
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .email_service import WeddingEmailService
-from .models import Guest, InvitationTemplate, Vendor
 from rest_framework.routers import DefaultRouter
+
+from .email_service import WeddingEmailService
+from .models import Guest, InvitationTemplate, Vendor, Wedding
 from . import analytics_views
 from .views import (
     WeddingViewSet, GuestViewSet, TaskViewSet, BudgetViewSet,
@@ -18,21 +20,11 @@ from .pdf_views import (
     download_vendor_list_pdf,
     download_invitation_pdf,
 )
-from .analytics_views import (
-    get_analytics,
-    get_trend_data,
-    create_snapshot,
-    get_category_breakdown,
-    get_timeline_status,
-    get_guest_analytics,
-    get_health_scores
-)
 from .pledge_views import GuestPledgeViewSet, PledgePaymentViewSet
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def send_rsvp_reminders(request, wedding_id):
-    from .models import Wedding
     wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
     guests = wedding.guests.filter(rsvp_status='pending')
     
@@ -62,63 +54,55 @@ router.register(r'weddings', WeddingViewSet, basename='wedding')
 
 urlpatterns = [
     path('', include(router.urls)),
+    
+    # Guests
     path('weddings/<int:wedding_id>/guests/', GuestViewSet.as_view({'get': 'list', 'post': 'create'}), name='guest-list'),
     path('weddings/<int:wedding_id>/guests/<int:pk>/', GuestViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='guest-detail'),
     
+    # Tasks
     path('weddings/<int:wedding_id>/tasks/', TaskViewSet.as_view({'get': 'list', 'post': 'create'}), name='task-list'),
     path('weddings/<int:wedding_id>/tasks/<int:pk>/', TaskViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='task-detail'),
     
+    # Budget
     path('weddings/<int:wedding_id>/budget/', BudgetViewSet.as_view({'get': 'list', 'post': 'create'}), name='budget-list'),
     path('weddings/<int:wedding_id>/budget/<int:pk>/', BudgetViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='budget-detail'),
     
+    # Galleries
     path('weddings/<int:wedding_id>/galleries/', PhotoGalleryViewSet.as_view({'get': 'list', 'post': 'create'}), name='gallery-list'),
     path('weddings/<int:wedding_id>/galleries/<int:pk>/', PhotoGalleryViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='gallery-detail'),
-    
     path('weddings/<int:wedding_id>/galleries/<int:album_id>/photos/', PhotoViewSet.as_view({'get': 'list', 'post': 'create'}), name='photo-list'),
     path('weddings/<int:wedding_id>/galleries/<int:album_id>/photos/<int:pk>/', PhotoViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='photo-detail'),
     
+    # Timeline
     path('weddings/<int:wedding_id>/timeline/', TimelineViewSet.as_view({'get': 'list', 'post': 'create'}), name='timeline-list'),
     path('weddings/<int:wedding_id>/timeline/<int:pk>/', TimelineViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='timeline-detail'),
     path('weddings/<int:wedding_id>/timeline/<int:pk>/toggle_completed/', TimelineViewSet.as_view({'post': 'toggle_completed'}), name='timeline-toggle'),
     
+    # Vendors
     path('weddings/<int:wedding_id>/vendors/', VendorViewSet.as_view({'get': 'list', 'post': 'create'}), name='vendor-list'),
     path('weddings/<int:wedding_id>/vendors/<int:pk>/', VendorViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='vendor-detail'),
     path('weddings/<int:wedding_id>/vendors/<int:pk>/add_note/', VendorViewSet.as_view({'post': 'add_note'}), name='vendor-add-note'),
     
+    # Invitation
     path('weddings/<int:wedding_id>/invitation/', InvitationTemplateViewSet.as_view({'get': 'list', 'post': 'create'}), name='invitation-list'),
     path('weddings/<int:wedding_id>/invitation/<int:pk>/', InvitationTemplateViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='invitation-detail'),
 
+    # PDFs
     path('weddings/<int:wedding_id>/pdf/guest-list/', download_guest_list_pdf, name='pdf-guest-list'),
     path('weddings/<int:wedding_id>/pdf/budget/', download_budget_report_pdf, name='pdf-budget'),
     path('weddings/<int:wedding_id>/pdf/timeline/', download_timeline_pdf, name='pdf-timeline'),
     path('weddings/<int:wedding_id>/pdf/vendors/', download_vendor_list_pdf, name='pdf-vendors'),
     path('weddings/<int:wedding_id>/pdf/invitation/', download_invitation_pdf, name='pdf-invitation'),
 
+    # Email
     path('weddings/<int:wedding_id>/email/rsvp-reminders/', send_rsvp_reminders, name='send-rsvp'),
     path('weddings/<int:wedding_id>/email/send-invitations/', send_invitations, name='send-invitations'),
 
-    path('weddings/<int:wedding_id>/analytics/', get_analytics, name='analytics'),
-    path('weddings/<int:wedding_id>/analytics/trends/', get_trend_data, name='trends'),
-    path('weddings/<int:wedding_id>/analytics/snapshot/', create_snapshot, name='snapshot'),
-    path('weddings/<int:wedding_id>/analytics/budget-breakdown/', get_category_breakdown, name='budget-breakdown'),
-    path('weddings/<int:wedding_id>/analytics/timeline-status/', get_timeline_status, name='timeline-status'),
-    path('weddings/<int:wedding_id>/analytics/guest-analytics/', get_guest_analytics, name='guest-analytics'),
-    path('weddings/<int:wedding_id>/analytics/health-scores/', get_health_scores, name='health-scores'),
-
-    # Pledge tracking
-    path('weddings/<int:wedding_id>/pledges/', GuestPledgeViewSet.as_view({'get': 'list', 'post': 'create'}), name='pledge-list'),
-    path('weddings/<int:wedding_id>/pledges/<int:pk>/', GuestPledgeViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='pledge-detail'),
-    path('weddings/<int:wedding_id>/pledges/summary/', GuestPledgeViewSet.as_view({'get': 'summary'}), name='pledge-summary'),
-    path('weddings/<int:wedding_id>/pledges/<int:pk>/record_payment/', GuestPledgeViewSet.as_view({'post': 'record_payment'}), name='pledge-record-payment'),
-    
-    # Payments
-    path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/', PledgePaymentViewSet.as_view({'get': 'list', 'post': 'create'}), name='payment-list'),
-    path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/<int:pk>/', PledgePaymentViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='payment-detail'),
-
-    # Analytics
+    # Main endpoints (used by Flutter)
     path('weddings/<int:wedding_id>/analytics/', analytics_views.wedding_analytics, name='wedding-analytics'),
     path('weddings/<int:wedding_id>/pledges/summary/', analytics_views.pledge_summary, name='pledge-summary'),
     
+    # Additional analytics endpoints
     path('weddings/<int:wedding_id>/analytics/detailed/', analytics_views.get_analytics, name='get-analytics'),
     path('weddings/<int:wedding_id>/analytics/trends/', analytics_views.get_trend_data, name='trend-data'),
     path('weddings/<int:wedding_id>/analytics/snapshot/', analytics_views.create_snapshot, name='create-snapshot'),
@@ -126,4 +110,14 @@ urlpatterns = [
     path('weddings/<int:wedding_id>/analytics/timeline/', analytics_views.get_timeline_status, name='timeline-status'),
     path('weddings/<int:wedding_id>/analytics/guests/', analytics_views.get_guest_analytics, name='guest-analytics'),
     path('weddings/<int:wedding_id>/analytics/health/', analytics_views.get_health_scores, name='health-scores'),
+
+    # Pledge tracking
+    path('weddings/<int:wedding_id>/pledges/', GuestPledgeViewSet.as_view({'get': 'list', 'post': 'create'}), name='pledge-list'),
+    path('weddings/<int:wedding_id>/pledges/<int:pk>/', GuestPledgeViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='pledge-detail'),
+    path('weddings/<int:wedding_id>/pledges/<int:pk>/record_payment/', GuestPledgeViewSet.as_view({'post': 'record_payment'}), name='pledge-record-payment'),
+    
+    # Payments
+    path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/', PledgePaymentViewSet.as_view({'get': 'list', 'post': 'create'}), name='payment-list'),
+    path('weddings/<int:wedding_id>/pledges/<int:pledge_id>/payments/<int:pk>/', PledgePaymentViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='payment-detail'),
 ]
+

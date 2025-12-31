@@ -11,6 +11,9 @@ from .analytics_serializers import (
     GuestEngagementMetricsSerializer
 )
 from .analytics_service import WeddingAnalyticsService
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ============================================
 # MAIN ENDPOINT - This is what Flutter calls
@@ -18,45 +21,42 @@ from .analytics_service import WeddingAnalyticsService
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def wedding_analytics(request, wedding_id):
-    """
-    Main analytics endpoint that Flutter app calls
-    Endpoint: /api/weddings/<id>/analytics/
-    """
-    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
-    
-    # Calculate fresh analytics
-    analytics = WeddingAnalyticsService.calculate_analytics(wedding)
-    
-    # Return data in format Flutter expects
-    return Response({
-        'total_invitations_sent': analytics.total_invitations_sent,
-        'total_confirmed': analytics.total_confirmed,
-        'total_pending': analytics.total_pending,
-        'total_declined': analytics.total_declined,
-        'average_guests_per_invitation': float(analytics.average_guests_per_invitation),
-        'total_estimated_budget': str(analytics.total_estimated_budget),
-        'total_actual_spending': str(analytics.total_actual_spending),
-        'budget_variance': str(analytics.budget_variance),
-        'budget_category_breakdown': analytics.budget_category_breakdown,
-        'total_tasks': analytics.total_tasks,
-        'completed_tasks': analytics.completed_tasks,
-        'pending_tasks': analytics.pending_tasks,
-        'overdue_tasks': analytics.overdue_tasks,
-        'completion_percentage': float(analytics.completion_percentage),
-        'total_vendors': analytics.total_vendors,
-        'vendors_booked': analytics.vendors_booked,
-        'average_vendor_quote': str(analytics.average_vendor_quote),
-        'total_vendor_cost': str(analytics.total_vendor_cost),
-        'days_until_wedding': analytics.days_until_wedding,
-        'weeks_until_wedding': analytics.weeks_until_wedding,
-        'planning_health_score': float(analytics.planning_health_score),
-        'budget_health_score': float(analytics.budget_health_score),
-        'task_health_score': float(analytics.task_health_score),
-        'guest_health_score': float(analytics.guest_health_score),
-        'overall_health_score': float(analytics.overall_health_score),
-    })
-
-
+    try:
+        wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+        analytics = WeddingAnalyticsService.calculate_analytics(wedding)
+        
+        # USE THIS DICTIONARY STRUCTURE
+        response_data = {
+            'total_invitations_sent': int(analytics.total_invitations_sent),
+            'total_confirmed': int(analytics.total_confirmed),
+            'total_pending': int(analytics.total_pending),
+            'total_declined': int(analytics.total_declined),
+            'average_guests_per_invitation': float(analytics.average_guests_per_invitation or 1.0),
+            'total_estimated_budget': float(analytics.total_estimated_budget or 0),
+            'total_actual_spending': float(analytics.total_actual_spending or 0),
+            'budget_variance': float(analytics.budget_variance or 0),
+            'budget_category_breakdown': analytics.budget_category_breakdown, # This is a Map
+            'total_tasks': int(analytics.total_tasks),
+            'completed_tasks': int(analytics.completed_tasks),
+            'pending_tasks': int(analytics.pending_tasks),
+            'overdue_tasks': int(analytics.overdue_tasks),
+            'completion_percentage': float(analytics.completion_percentage or 0),
+            'total_vendors': int(analytics.total_vendors),
+            'vendors_booked': int(analytics.vendors_booked),
+            'average_vendor_quote': float(analytics.average_vendor_quote or 0),
+            'total_vendor_cost': float(analytics.total_vendor_cost or 0),
+            'days_until_wedding': int(analytics.days_until_wedding),
+            'weeks_until_wedding': int(analytics.weeks_until_wedding),
+            'planning_health_score': float(analytics.planning_health_score or 0),
+            'budget_health_score': float(analytics.budget_health_score or 0),
+            'task_health_score': float(analytics.task_health_score or 0),
+            'guest_health_score': float(analytics.guest_health_score or 0),
+            'overall_health_score': float(analytics.overall_health_score or 0),
+        }
+        return Response(response_data)
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        raise
 # ============================================
 # PLEDGE SUMMARY ENDPOINT
 # ============================================
@@ -67,24 +67,33 @@ def pledge_summary(request, wedding_id):
     Pledge summary endpoint
     Endpoint: /api/weddings/<id>/pledges/summary/
     """
-    wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
-    pledges = wedding.pledges.all()
-    
-    from decimal import Decimal
-    total_pledged = sum(p.pledged_amount for p in pledges) or Decimal(0)
-    total_paid = sum(p.paid_amount for p in pledges) or Decimal(0)
-    total_balance = sum(p.balance for p in pledges) or Decimal(0)
-    
-    return Response({
-        'total_pledged': str(total_pledged),
-        'total_paid': str(total_paid),
-        'total_balance': str(total_balance),
-        'total_pledgers': pledges.count(),
-        'fully_paid_count': pledges.filter(payment_status='paid').count(),
-        'partially_paid_count': pledges.filter(payment_status='partial').count(),
-        'unpaid_count': pledges.filter(payment_status='pledged').count(),
-    })
-
+    try:
+        wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
+        pledges = wedding.pledges.all()
+        
+        logger.info(f"Pledge summary for wedding {wedding_id}, pledges count: {pledges.count()}")
+        
+        from decimal import Decimal
+        total_pledged = sum(p.pledged_amount for p in pledges) or Decimal(0)
+        total_paid = sum(p.paid_amount for p in pledges) or Decimal(0)
+        total_balance = sum(p.balance for p in pledges) or Decimal(0)
+        
+        response_data = {
+            'total_pledged': str(total_pledged),
+            'total_paid': str(total_paid),
+            'total_balance': str(total_balance),
+            'total_pledgers': pledges.count(),
+            'fully_paid_count': pledges.filter(payment_status='paid').count(),
+            'partially_paid_count': pledges.filter(payment_status='partial').count(),
+            'unpaid_count': pledges.filter(payment_status='pledged').count(),
+        }
+        
+        logger.info(f"Pledge summary response: {response_data}")
+        return Response(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error in pledge_summary: {str(e)}", exc_info=True)
+        raise
 
 # ============================================
 # OTHER ANALYTICS ENDPOINTS (Optional)
@@ -96,7 +105,6 @@ def get_analytics(request, wedding_id):
     """Get comprehensive analytics for a wedding"""
     wedding = get_object_or_404(Wedding, id=wedding_id, user=request.user)
     
-    # Calculate fresh analytics
     analytics = WeddingAnalyticsService.calculate_analytics(wedding)
     engagement = WeddingAnalyticsService.calculate_engagement_metrics(wedding)
     comparison = WeddingAnalyticsService.get_comparison_data(wedding)
@@ -116,7 +124,6 @@ def get_analytics(request, wedding_id):
             'overall_health': analytics.overall_health_score
         }
     })
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

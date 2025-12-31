@@ -54,32 +54,42 @@ class WeddingAnalytics {
   });
 
   factory WeddingAnalytics.fromJson(Map<String, dynamic> json) {
-    return WeddingAnalytics(
-      totalInvitationsSent: json['total_invitations_sent'] ?? 0,
-      totalConfirmed: json['total_confirmed'] ?? 0,
-      totalPending: json['total_pending'] ?? 0,
-      totalDeclined: json['total_declined'] ?? 0,
-      averageGuestsPerInvitation: (json['average_guests_per_invitation'] ?? 1.0).toDouble(),
-      totalEstimatedBudget: double.parse(json['total_estimated_budget']?.toString() ?? '0'),
-      totalActualSpending: double.parse(json['total_actual_spending']?.toString() ?? '0'),
-      budgetVariance: double.parse(json['budget_variance']?.toString() ?? '0'),
-      budgetCategoryBreakdown: json['budget_category_breakdown'] ?? {},
-      totalTasks: json['total_tasks'] ?? 0,
-      completedTasks: json['completed_tasks'] ?? 0,
-      pendingTasks: json['pending_tasks'] ?? 0,
-      overdueTasks: json['overdue_tasks'] ?? 0,
-      completionPercentage: (json['completion_percentage'] ?? 0.0).toDouble(),
-      totalVendors: json['total_vendors'] ?? 0,
-      vendorsBooked: json['vendors_booked'] ?? 0,
-      averageVendorQuote: double.parse(json['average_vendor_quote']?.toString() ?? '0'),
-      totalVendorCost: double.parse(json['total_vendor_cost']?.toString() ?? '0'),
-      daysUntilWedding: json['days_until_wedding'] ?? 0,
-      weeksUntilWedding: json['weeks_until_wedding'] ?? 0,
-      planningHealthScore: (json['planning_health_score'] ?? 0.0).toDouble(),
-      budgetHealthScore: (json['budget_health_score'] ?? 0.0).toDouble(),
-      taskHealthScore: (json['task_health_score'] ?? 0.0).toDouble(),
-      guestHealthScore: (json['guest_health_score'] ?? 0.0).toDouble(),
-      overallHealthScore: (json['overall_health_score'] ?? 0.0).toDouble(),
-    );
+  // Helper function to handle any weirdness from the API
+  double asDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0; // If it's a Map or List, return 0 instead of crashing
   }
+
+  return WeddingAnalytics(
+    totalInvitationsSent: json['total_invitations_sent'] ?? 0,
+    totalConfirmed: json['total_confirmed'] ?? 0,
+    totalPending: json['total_pending'] ?? 0,
+    totalDeclined: json['total_declined'] ?? 0,
+    averageGuestsPerInvitation: asDouble(json['average_guests_per_invitation']),
+    totalEstimatedBudget: asDouble(json['total_estimated_budget']),
+    totalActualSpending: asDouble(json['total_actual_spending']),
+    budgetVariance: asDouble(json['budget_variance']),
+    budgetCategoryBreakdown: json['budget_category_breakdown'] is Map 
+        ? Map<String, dynamic>.from(json['budget_category_breakdown']) 
+        : {},
+    totalTasks: json['total_tasks'] ?? 0,
+    completedTasks: json['completed_tasks'] ?? 0,
+    pendingTasks: json['pending_tasks'] ?? 0,
+    overdueTasks: json['overdue_tasks'] ?? 0,
+    completionPercentage: asDouble(json['completion_percentage']),
+    totalVendors: json['total_vendors'] ?? 0,
+    vendorsBooked: json['vendors_booked'] ?? 0,
+    averageVendorQuote: asDouble(json['average_vendor_quote']),
+    totalVendorCost: asDouble(json['total_vendor_cost']),
+    daysUntilWedding: json['days_until_wedding'] ?? 0,
+    weeksUntilWedding: json['weeks_until_wedding'] ?? 0,
+    planningHealthScore: asDouble(json['planning_health_score']),
+    budgetHealthScore: asDouble(json['budget_health_score']),
+    taskHealthScore: asDouble(json['task_health_score']),
+    guestHealthScore: asDouble(json['guest_health_score']),
+    overallHealthScore: asDouble(json['overall_health_score']),
+  );
+}
 }
