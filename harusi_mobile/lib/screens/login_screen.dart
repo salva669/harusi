@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 // Welcome Text
                 Text(
-                  'Welcome to Harusi',
+                  'Welcome to Harusi Yangu',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[800],
