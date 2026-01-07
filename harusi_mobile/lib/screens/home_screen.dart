@@ -547,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   _currentWedding != null
                       ? '${_currentWedding!.brideName} & ${_currentWedding!.groomName}'
-                      : 'Wedding Planner',
+                      : 'Harusi Yangu',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
