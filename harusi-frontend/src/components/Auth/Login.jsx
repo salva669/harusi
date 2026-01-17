@@ -42,7 +42,7 @@ export const Login = () => {
     <div className="auth-header">
       <Heart className="heart-icon" />
       <h1>Welcome to Harusi Yangu 💒</h1>
-      <p>Your Wedding Planning Companion</p>
+      <p>Plan your perfect wedding</p>
     </div>
     
     {error && <div className="alert error">{error}</div>}
@@ -78,7 +78,7 @@ export const Login = () => {
     </form>
     
     <p className="auth-link">
-      Don't have an account? <Link to="/register">Register here</Link>
+      Don't have an account? <Link to="/register">Sign Up</Link>
     </p>
   </div>
 </div>
