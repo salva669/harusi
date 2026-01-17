@@ -7,6 +7,8 @@ import './Auth.css';
 export const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [countryCode, setCountryCode] = useState('+255'); // Default to Tanzania
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,12 +18,30 @@ export const Register = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const countryCodes = [
+    { code: '+255', country: 'Tanzania', flag: '🇹🇿' },
+    { code: '+254', country: 'Kenya', flag: '🇰🇪' },
+    { code: '+256', country: 'Uganda', flag: '🇺🇬' },
+    { code: '+250', country: 'Rwanda', flag: '🇷🇼' },
+    { code: '+1', country: 'USA/Canada', flag: '🇺🇸' },
+    { code: '+44', country: 'UK', flag: '🇬🇧' },
+    { code: '+27', country: 'South Africa', flag: '🇿🇦' },
+    { code: '+234', country: 'Nigeria', flag: '🇳🇬' },
+    { code: '+91', country: 'India', flag: '🇮🇳' },
+    { code: '+86', country: 'China', flag: '🇨🇳' },
+  ];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (!acceptTerms) {
       setError('Please accept the terms and conditions');
+      return;
+    }
+
+    if (email !== confirmEmail) {
+      setError('Email addresses do not match');
       return;
     }
 
@@ -38,10 +58,11 @@ export const Register = () => {
     setLoading(true);
 
     try {
+      const fullPhone = `${countryCode}${phone}`;
       await api.post('/register/', { 
         username, 
         email, 
-        phone,
+        phone: fullPhone,
         password,
         user_type: userType 
       });
@@ -120,14 +141,39 @@ export const Register = () => {
           </div>
 
           <div className="form-group">
-            <label>Phone Number</label>
+            <label>Confirm Email</label>
             <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Enter your phone number"
+              type="email"
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              placeholder="Re-enter your email"
               required
             />
+          </div>
+
+          <div className="form-group">
+            <label>Phone Number</label>
+            <div className="phone-input-group">
+              <select 
+                className="country-code-select"
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+              >
+                {countryCodes.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.flag} {country.code}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="712345678"
+                required
+                className="phone-number-input"
+              />
+            </div>
           </div>
           
           <div className="form-group">
