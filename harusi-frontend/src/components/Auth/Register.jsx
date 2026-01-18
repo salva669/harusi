@@ -8,7 +8,7 @@ export const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
-  const [countryCode, setCountryCode] = useState('+255'); // Default to Tanzania
+  const [countryCode, setCountryCode] = useState('+255');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -34,47 +34,81 @@ export const Register = () => {
   ];
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  e.preventDefault();
+  console.log('=== FORM SUBMITTED ===');
+  setError('');
 
-    if (!acceptTerms) {
-      setError('Please accept the terms and conditions');
-      return;
-    }
+  // Validation checks
+  if (!acceptTerms) {
+    console.log('Terms not accepted');
+    setError('Please accept the terms and conditions');
+    return;
+  }
 
-    if (email !== confirmEmail) {
-      setError('Email addresses do not match');
-      return;
-    }
+  if (email !== confirmEmail) {
+    console.log('Emails do not match');
+    setError('Email addresses do not match');
+    return;
+  }
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+  if (password !== confirmPassword) {
+    console.log('Passwords do not match');
+    setError('Passwords do not match');
+    return;
+  }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
+  if (password.length < 6) {
+    console.log('Password too short');
+    setError('Password must be at least 6 characters');
+    return;
+  }
 
-    setLoading(true);
+  console.log('All validations passed, starting registration...');
+  setLoading(true);
 
-    try {
-      const fullPhone = `${countryCode}${phone}`;
-      await api.post('/register/', { 
-        username, 
-        email, 
-        phone: fullPhone,
-        password,
-        user_type: userType 
-      });
-      navigate('/login');
-    } catch (err) {
-      setError(err.response?.data?.username?.[0] || err.response?.data?.email?.[0] || 'Registration failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const fullPhone = `${countryCode}${phone}`;
+    
+    // Changed 'username' to 'name' to match backend
+    const payload = { 
+      name: username,  // ← Changed from 'username' to 'name'
+      email: email, 
+      phone: fullPhone,
+      password: password,
+      user_type: userType 
+    };
+    
+    console.log('Payload being sent:', payload);
+    
+    const response = await api.post('/register/', payload);
+    
+    console.log('Success! Response:', response.data);
+    
+    // Store the token
+    localStorage.setItem('token', response.data.token);
+    
+    alert('Registration successful!');
+    navigate('/login');
+    
+  } catch (err) {
+    console.error('Full error:', err);
+    console.error('Error response:', err.response);
+    console.error('Error data:', err.response?.data);
+    
+    // Better error handling to show backend error messages
+    const errorMessage = 
+      err.response?.data?.error || 
+      err.response?.data?.message ||
+      'Registration failed. Please try again.';
+    
+    setError(errorMessage);
+  } finally {
+    setLoading(false);
+    console.log('=== REGISTRATION COMPLETE ===');
+  }
+};
+
+  console.log('Component rendered. Loading state:', loading);
 
   return (
     <div className="auth-container">
@@ -231,7 +265,12 @@ export const Register = () => {
             </label>
           </div>
           
-          <button type="submit" className="primary" disabled={loading}>
+          <button 
+            type="submit" 
+            className="primary" 
+            disabled={loading}
+            onClick={() => console.log('Button clicked!')}
+          >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
