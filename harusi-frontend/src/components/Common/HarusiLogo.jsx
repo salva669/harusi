@@ -2,11 +2,12 @@ const HarusiLogo = ({ size = 32, className = "" }) => (
   <svg 
     width={size} 
     height={size} 
-    viewBox="0 0 80 80" 
+    viewBox="0 0 100 100"  // Changed from "0 0 80 80" to give more space
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    style={{ display: 'block' }}
   >
-    <g transform="translate(40, 40)">
+    <g transform="translate(50, 50)">  {/* Changed from translate(40, 40) */}
       <circle cx="-15" cy="0" r="25" fill="none" stroke="#ec4899" strokeWidth="6"/>
       <circle cx="15" cy="0" r="25" fill="none" stroke="#f472b6" strokeWidth="6"/>
       <text x="0" y="8" fontFamily="Arial, sans-serif" fontSize="28" fontWeight="bold" textAnchor="middle" fill="#ec4899">
