@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Navbar.css';
+import HarusiLogo from '../Common/HarusiLogo';  // Fixed: removed one '../'
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
@@ -14,7 +15,7 @@ export const Navbar = () => {
     <nav className="navbar">
       <div className="container navbar-container">
         <Link to="/" className="navbar-logo">
-          💒 Harusi
+          <HarusiLogo size={32} /> Harusi
         </Link>
         <div className="navbar-menu">
           {user ? (

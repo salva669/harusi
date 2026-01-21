@@ -43,3 +43,9 @@
   .nav-link:hover {
     background-color: #f0f9ff;
   }
+
+  .navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  }
