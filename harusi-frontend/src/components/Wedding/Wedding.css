@@ -208,3 +208,23 @@
   .tab-content.active {
     display: block;
   }
+
+  .form-actions .primary {
+    background-color: #db2777; /* Pink color matching your theme */
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.form-actions .primary:hover:not(:disabled) {
+    background-color: #be185d; /* Darker pink on hover */
+}
+
+.form-actions .primary:disabled {
+    background-color: #f3b8d3; /* Lighter pink when disabled */
+    cursor: not-allowed;
+}
