@@ -66,3 +66,67 @@
   .upload-btn:hover {
     background-color: #2563eb;
   }
+
+  .coming-soon-container {
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.coming-soon-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.coming-soon-container h2 {
+  color: #1f2937;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.coming-soon-text {
+  font-size: 1.5rem;
+  color: #db2777;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.coming-soon-description {
+  color: #6b7280;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+}
+
+.coming-soon-features {
+  list-style: none;
+  padding: 0;
+  margin: 30px 0;
+}
+
+.coming-soon-features li {
+  background: white;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 8px;
+  border-left: 4px solid #db2777;
+  color: #1f2937;
+  font-size: 1rem;
+  text-align: left;
+}
+
+.coming-soon-footer {
+  color: #9ca3af;
+  font-style: italic;
+  margin-top: 30px;
+}
