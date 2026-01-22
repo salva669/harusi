@@ -116,7 +116,9 @@ export const PledgeManagement = ({ weddingId }) => {
               <div className="pledge-header">
                 <div>
                   <h3>{pledge.guest_name}</h3>
-                  <p className="pledge-type">{pledge.contribution_type.replace('_', ' ')}</p>
+                  <p className="pledge-type">
+                    {pledge.payment_method ? pledge.payment_method.replace(/_/g, ' ') : 'Guest Pledge'}
+                  </p>
                 </div>
                 <span className={`status-badge ${pledge.payment_status}`}>
                   {pledge.payment_status}
