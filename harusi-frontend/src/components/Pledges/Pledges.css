@@ -307,3 +307,100 @@
         font-size: 1.1rem;
       }
   }
+
+  /* Payment Modal Styles */
+.payment-modal-info {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.payment-modal-info .info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.payment-modal-info .info-row:last-child {
+  border-bottom: none;
+}
+
+.payment-modal-info .info-row.highlight {
+  background: #fef3c7;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.payment-modal-info .label {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.payment-modal-info .value {
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.payment-modal-info .highlight .label,
+.payment-modal-info .highlight .value {
+  color: #92400e;
+}
+
+.payment-form .alert {
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.payment-form .form-group {
+  margin-bottom: 16px;
+}
+
+.payment-form label {
+  display: block;
+  margin-bottom: 6px;
+  color: #374151;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.payment-form input,
+.payment-form select,
+.payment-form textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.payment-form input:focus,
+.payment-form select:focus,
+.payment-form textarea:focus {
+  outline: none;
+  border-color: #db2777;
+  box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.1);
+}
+
+.payment-form .form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.payment-form .form-actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}

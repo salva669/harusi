@@ -11,6 +11,7 @@ import { VendorList } from '../Vendors/VendorList';
 import { PDFDownloads } from '../Reports/PDFDownloads';  
 import { AnalyticsDashboard } from '../Analytics/AnalyticsDashboard';
 import { PledgeManagement } from '../Pledges/PledgeManagement';
+import HarusiLogo from '../Common/HarusiLogo';
 import './Wedding.css';
 
 export const WeddingDetail = () => {
@@ -46,7 +47,7 @@ export const WeddingDetail = () => {
   return (
     <div className="wedding-detail">
       <div className="wedding-detail-header">
-        <h1>💒 {wedding.bride_name} & {wedding.groom_name}</h1>
+        <h1 className="single-line-header"><HarusiLogo size={32} style={{ marginLeft: '8px' }} /> {wedding.bride_name} & {wedding.groom_name}</h1>
         <p style={{ fontSize: '1.1rem', marginTop: '10px' }}>
           {daysUntil > 0 
             ? `${daysUntil} days to go! 🎉` 

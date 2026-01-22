@@ -228,3 +228,9 @@
     background-color: #f3b8d3; /* Lighter pink when disabled */
     cursor: not-allowed;
 }
+
+.single-line-header {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}

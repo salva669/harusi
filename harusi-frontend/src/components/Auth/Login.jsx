@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import './Auth.css';
 import { Heart } from 'lucide-react';
+import HarusiLogo from '../Common/HarusiLogo';
 
 export const Login = () => {
   const [username, setUsername] = useState('');
@@ -41,7 +42,10 @@ export const Login = () => {
   <div className="auth-card">
     <div className="auth-header">
       <Heart className="heart-icon" />
-      <h1>Welcome to Harusi Yangu 💒</h1>
+      <h1 className="single-line-header">
+        Welcome to Harusi Yangu 
+        <HarusiLogo size={32} style={{ marginLeft: '8px' }} />
+      </h1>
       <p>Plan your perfect wedding</p>
     </div>
     
