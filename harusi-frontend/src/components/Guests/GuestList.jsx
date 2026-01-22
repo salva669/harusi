@@ -108,7 +108,6 @@ export const GuestList = ({ weddingId }) => {
                 {guest.email && <p>✉️ {guest.email}</p>}
                 {guest.phone && <p>📱 {guest.phone}</p>}
                 <p>👥 {guest.number_of_guests} {guest.number_of_guests > 1 ? 'guests' : 'guest'}</p>
-                {guest.dietary_restrictions && <p>🥗 {guest.dietary_restrictions}</p>}
               </div>
               <div className="guest-actions">
                 <button 
