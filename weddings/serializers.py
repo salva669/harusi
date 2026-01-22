@@ -107,7 +107,7 @@ class PledgePaymentSerializer(serializers.ModelSerializer):
         model = PledgePayment
         fields = ['id', 'pledge', 'amount', 'payment_date', 'payment_method', 
                   'reference_number', 'notes', 'recorded_by', 'recorded_by_username', 'created_at']
-        read_only_fields = ['id', 'created_at', 'recorded_by']
+        read_only_fields = ['id', 'created_at', 'recorded_by', 'pledge']
 
 
 class GuestPledgeSerializer(serializers.ModelSerializer):
