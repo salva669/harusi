@@ -58,6 +58,12 @@
   font-size: 0.875rem;
 }
 
+.single-line-header {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
 /* ============================================
    FORM ELEMENTS
    ============================================ */
