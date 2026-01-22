@@ -89,19 +89,19 @@ export const PledgeManagement = ({ weddingId }) => {
           className={`filter-btn ${filter === 'pledged' ? 'active' : ''}`}
           onClick={() => setFilter('pledged')}
         >
-          Pledged ({summary?.status_breakdown.pledged || 0})
+          Pledged ({summary?.status_breakdown?.pledged || 0})
         </button>
         <button 
           className={`filter-btn ${filter === 'partial' ? 'active' : ''}`}
           onClick={() => setFilter('partial')}
         >
-          Partial ({summary?.status_breakdown.partial || 0})
+          Partial ({summary?.status_breakdown?.partial || 0})
         </button>
         <button 
           className={`filter-btn ${filter === 'paid' ? 'active' : ''}`}
           onClick={() => setFilter('paid')}
         >
-          Paid ({summary?.status_breakdown.paid || 0})
+          Paid ({summary?.status_breakdown?.paid || 0})
         </button>
       </div>
 
