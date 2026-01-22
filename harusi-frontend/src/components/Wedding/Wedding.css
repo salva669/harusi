@@ -51,7 +51,7 @@
   
   .status-badge.planning {
     background-color: #dbeafe;
-    color: #1e40af;
+    color: #db2777;
   }
   
   .status-badge.in_progress {
@@ -136,7 +136,7 @@
   }
   
   .wedding-detail-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #db2777 0%, #764ba2 100%);
     color: white;
     padding: 40px;
     border-radius: 12px;
@@ -159,7 +159,7 @@
     background: white;
     padding: 15px;
     border-radius: 8px;
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid #db2777;
   }
   
   .info-item label {
@@ -193,12 +193,12 @@
   }
   
   .tab-button.active {
-    color: #3b82f6;
-    border-bottom-color: #3b82f6;
+    color: #db2777;
+    border-bottom-color: #db2777;
   }
   
   .tab-button:hover {
-    color: #3b82f6;
+    color: #db2777;
   }
   
   .tab-content {
@@ -208,3 +208,23 @@
   .tab-content.active {
     display: block;
   }
+
+  .form-actions .primary {
+    background-color: #db2777; /* Pink color matching your theme */
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.form-actions .primary:hover:not(:disabled) {
+    background-color: #be185d; /* Darker pink on hover */
+}
+
+.form-actions .primary:disabled {
+    background-color: #f3b8d3; /* Lighter pink when disabled */
+    cursor: not-allowed;
+}

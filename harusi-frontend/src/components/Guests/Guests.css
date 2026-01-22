@@ -6,7 +6,7 @@
   }
   
   .stat-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #ec4899 0%, #764ba2 100%);
     color: white;
     padding: 20px;
     border-radius: 8px;
@@ -104,3 +104,23 @@
     margin-bottom: 20px;
     color: #1f2937;
   }
+
+  .primary {
+    background-color: #db2777;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.primary:hover:not(:disabled) {
+    background-color: #be185d;
+}
+
+.primary:disabled {
+    background-color: #f3b8d3;
+    cursor: not-allowed;
+}

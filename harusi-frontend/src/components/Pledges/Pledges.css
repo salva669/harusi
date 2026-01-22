@@ -10,7 +10,7 @@
   }
   
   .summary-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #db2777 0%, #764ba2 100%);
     color: white;
     padding: 20px;
     border-radius: 12px;
@@ -76,7 +76,7 @@
   }
   
   .filter-btn.active {
-    background-color: #667eea;
+    background-color: #db2777;
     color: white;
   }
   
@@ -116,7 +116,7 @@
   
   .status-badge.partial {
     background-color: #dbeafe;
-    color: #1e40af;
+    color: #db2777;
   }
   
   .status-badge.paid {

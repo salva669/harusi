@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import './Auth.css';
+import { Heart } from 'lucide-react';
 
 export const Login = () => {
   const [username, setUsername] = useState('');
@@ -37,42 +38,49 @@ export const Login = () => {
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
-        <h1>Welcome to Harusi 💒</h1>
-        <p>Your Wedding Planning Companion</p>
-        
-        {error && <div className="alert error">{error}</div>}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          
-          <button type="submit" className="primary" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-        
-        <p className="auth-link">
-          Don't have an account? <Link to="/register">Register here</Link>
-        </p>
-      </div>
+  <div className="auth-card">
+    <div className="auth-header">
+      <Heart className="heart-icon" />
+      <h1>Welcome to Harusi Yangu 💒</h1>
+      <p>Plan your perfect wedding</p>
     </div>
+    
+    {error && <div className="alert error">{error}</div>}
+    
+    <form onSubmit={handleSubmit}>
+      <div className="form-group">
+        <label>Username</label>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+      </div>
+      
+      <div className="form-group">
+        <label>Password</label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="forgot-password">
+        <Link to="/forgot-password">Forgot Password?</Link>
+      </div>
+      
+      <button type="submit" className="primary" disabled={loading}>
+        {loading ? 'Logging in...' : 'Login'}
+      </button>
+    </form>
+    
+    <p className="auth-link">
+      Don't have an account? <Link to="/register">Sign Up</Link>
+    </p>
+  </div>
+</div>
   );
 };

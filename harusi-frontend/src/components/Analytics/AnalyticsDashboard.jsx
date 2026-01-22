@@ -19,7 +19,7 @@ export const AnalyticsDashboard = ({ weddingId }) => {
 
   const loadAnalytics = async () => {
     try {
-      const response = await api.get(`/weddings/${weddingId}/analytics/`);
+      const response = await api.get(`/weddings/${weddingId}/analytics/detailed/`);
       setAnalytics(response.data);
     } catch (err) {
       console.error('Failed to load analytics');

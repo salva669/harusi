@@ -1,45 +1,383 @@
+/* ============================================
+   AUTH CONTAINER & CARD
+   ============================================ */
+
 .auth-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: calc(100vh - 70px);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 70px);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.auth-card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.register-card {
+  max-width: 450px;
+}
+
+/* ============================================
+   AUTH HEADER
+   ============================================ */
+
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.heart-icon {
+  width: 60px;
+  height: 60px;
+  color: #ec4899;
+  fill: #ec4899;
+  margin-bottom: 12px;
+}
+
+.auth-card h1 {
+  color: #1f2937;
+  margin-bottom: 6px;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.auth-card p {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 0;
+  font-size: 0.875rem;
+}
+
+/* ============================================
+   FORM ELEMENTS
+   ============================================ */
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+  border-color: #ec4899;
+}
+
+/* ============================================
+   USER TYPE SELECTION
+   ============================================ */
+
+.user-type-chips {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.user-type-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background-color: #f3f4f6;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.user-type-chip svg {
+  color: #6b7280;
+}
+
+.user-type-chip.selected {
+  background-color: #ec4899;
+  border-color: #ec4899;
+  color: white;
+  font-weight: 600;
+}
+
+.user-type-chip.selected svg {
+  color: white;
+}
+
+.user-type-chip:hover:not(.selected) {
+  background-color: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+/* ============================================
+   PHONE INPUT WITH COUNTRY CODE
+   ============================================ */
+
+.phone-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.country-code-select {
+  flex: 0 0 110px;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 0.875rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.country-code-select:focus {
+  border-color: #ec4899;
+}
+
+.phone-number-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.phone-number-input:focus {
+  border-color: #ec4899;
+}
+
+/* ============================================
+   PASSWORD INPUT WITH VISIBILITY TOGGLE
+   ============================================ */
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding: 10px 40px 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.password-input-wrapper input:focus {
+  border-color: #ec4899;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s;
+}
+
+.password-toggle:hover {
+  color: #ec4899;
+}
+
+/* ============================================
+   TERMS & CONDITIONS CHECKBOX
+   ============================================ */
+
+.terms-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 0.875rem;
+}
+
+.terms-checkbox input[type="checkbox"] {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #ec4899;
+}
+
+.terms-checkbox label {
+  color: #4b5563;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.terms-link {
+  color: #ec4899;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   FORGOT PASSWORD LINK
+   ============================================ */
+
+.forgot-password {
+  text-align: right;
+  margin-top: 6px;
+  margin-bottom: 16px;
+}
+
+.forgot-password a {
+  color: #ec4899;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.forgot-password a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.auth-card button.primary {
+  background-color: #ec4899;
+  border: none;
+  color: white;
+  padding: 10px;
+  width: 100%;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.auth-card button.primary:hover:not(:disabled) {
+  background-color: #db2777;
+}
+
+.auth-card button.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   AUTH LINKS
+   ============================================ */
+
+.auth-link {
+  text-align: center;
+  color: #6b7280;
+  margin-top: 16px;
+  font-size: 0.875rem;
+}
+
+.auth-link a {
+  color: #ec4899;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-link a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   ALERTS
+   ============================================ */
+
+.alert {
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+}
+
+.alert.error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.alert.success {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.alert.info {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 640px) {
+  .auth-container {
+    padding: 10px;
+  }
+
+  .auth-card {
     padding: 20px;
   }
-  
-  .auth-card {
-    background: white;
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 400px;
+
+  .user-type-chips {
+    flex-direction: column;
   }
-  
+
+  .user-type-chip {
+    flex-direction: row;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .heart-icon {
+    width: 50px;
+    height: 50px;
+  }
+
   .auth-card h1 {
-    color: #1f2937;
-    margin-bottom: 10px;
-    text-align: center;
+    font-size: 1.1rem;
   }
-  
-  .auth-card p {
-    text-align: center;
-    color: #6b7280;
-    margin-bottom: 30px;
-  }
-  
-  .auth-link {
-    text-align: center;
-    color: #6b7280;
-    margin-top: 20px;
-  }
-  
-  .auth-link a {
-    color: #3b82f6;
-    text-decoration: none;
-    font-weight: 600;
-  }
-  
-  .auth-link a:hover {
-    text-decoration: underline;
-  }
+}

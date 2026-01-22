@@ -12,11 +12,19 @@ export const PledgeForm = ({ weddingId, pledge, onSave, onCancel }) => {
     notes: '',
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadGuests();
     if (pledge) {
-      setFormData(pledge);
+      setFormData({
+        guest: pledge.guest || '',
+        pledged_amount: pledge.pledged_amount || '',
+        paid_amount: pledge.paid_amount || 0,
+        payment_method: pledge.payment_method || '',
+        payment_deadline: pledge.payment_deadline || '',
+        notes: pledge.notes || '',
+      });
     }
   }, [pledge]);
 
@@ -37,16 +45,31 @@ export const PledgeForm = ({ weddingId, pledge, onSave, onCancel }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
     try {
+      // Prepare data - remove empty strings for optional fields
+      const dataToSubmit = {
+        guest: parseInt(formData.guest),
+        pledged_amount: parseFloat(formData.pledged_amount),
+        paid_amount: parseFloat(formData.paid_amount) || 0,
+        payment_method: formData.payment_method || null,
+        payment_deadline: formData.payment_deadline || null,
+        notes: formData.notes || '',
+      };
+
+      console.log('Submitting data:', dataToSubmit); // Debug log
+
       if (pledge) {
-        await pledgeAPI.update(weddingId, pledge.id, formData);
+        await pledgeAPI.update(weddingId, pledge.id, dataToSubmit);
       } else {
-        await pledgeAPI.create(weddingId, formData);
+        await pledgeAPI.create(weddingId, dataToSubmit);
       }
       onSave();
     } catch (err) {
-      console.error('Failed to save pledge');
+      console.error('Full error:', err);
+      console.error('Error response:', err.response?.data);
+      setError(err.response?.data?.detail || 'Failed to save pledge');
     } finally {
       setLoading(false);
     }
@@ -55,6 +78,8 @@ export const PledgeForm = ({ weddingId, pledge, onSave, onCancel }) => {
   return (
     <form onSubmit={handleSubmit} className="card pledge-form">
       <h3>{pledge ? 'Edit Pledge' : 'Record New Pledge'}</h3>
+
+      {error && <div className="alert error">{error}</div>}
 
       <div className="form-row">
         <div className="form-group">
@@ -77,6 +102,7 @@ export const PledgeForm = ({ weddingId, pledge, onSave, onCancel }) => {
             value={formData.pledged_amount}
             onChange={handleChange}
             required
+            min="0"
             step="1000"
           />
         </div>
@@ -87,6 +113,7 @@ export const PledgeForm = ({ weddingId, pledge, onSave, onCancel }) => {
             name="paid_amount"
             value={formData.paid_amount}
             onChange={handleChange}
+            min="0"
             step="1000"
           />
         </div>
