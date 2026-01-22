@@ -4,13 +4,14 @@ import { PledgeForm } from './PledgeForm';
 import { PledgeSummary } from './PledgeSummary';
 import { Loading } from '../Common/Loading';
 import { PaymentModal } from './PaymentModal';
+import { Modal } from '../Common/Modal';
 import './Pledges.css';
 
 export const PledgeManagement = ({ weddingId }) => {
   const [pledges, setPledges] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
   const [editingPledge, setEditingPledge] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPledge, setSelectedPledge] = useState(null);
@@ -48,7 +49,22 @@ export const PledgeManagement = ({ weddingId }) => {
 
   const handleSave = () => {
     loadData();
-    setShowForm(false);
+    setShowFormModal(false);
+    setEditingPledge(null);
+  };
+
+  const handleEdit = (pledge) => {
+    setEditingPledge(pledge);
+    setShowFormModal(true);
+  };
+
+  const handleAddNew = () => {
+    setEditingPledge(null);
+    setShowFormModal(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowFormModal(false);
     setEditingPledge(null);
   };
 
@@ -62,19 +78,10 @@ export const PledgeManagement = ({ weddingId }) => {
     <div className="pledge-management">
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
         <h2>💰 Guest Contributions & Pledges</h2>
-        <button className="primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? '✕ Cancel' : '+ Add Pledge'}
+        <button className="primary" onClick={handleAddNew}>
+          + Add Pledge
         </button>
       </div>
-
-      {showForm && (
-        <PledgeForm 
-          weddingId={weddingId}
-          pledge={editingPledge}
-          onSave={handleSave}
-          onCancel={() => { setShowForm(false); setEditingPledge(null); }}
-        />
-      )}
 
       {summary && <PledgeSummary summary={summary} />}
 
@@ -160,18 +167,18 @@ export const PledgeManagement = ({ weddingId }) => {
               {pledge.notes && <p className="pledge-notes">{pledge.notes}</p>}
 
               <div className="pledge-actions">
-              <button 
-                className="primary" 
-                onClick={() => {
+                <button 
+                  className="primary" 
+                  onClick={() => {
                     setSelectedPledge(pledge);
                     setShowPaymentModal(true);
-                }}
+                  }}
                 >
-                Record Payment
+                  Record Payment
                 </button>
                 <button 
                   className="secondary" 
-                  onClick={() => { setEditingPledge(pledge); setShowForm(true); }}
+                  onClick={() => handleEdit(pledge)}
                 >
                   Edit
                 </button>
@@ -186,22 +193,37 @@ export const PledgeManagement = ({ weddingId }) => {
           ))}
         </div>
       )}
+
+      {/* Edit/Add Pledge Modal */}
+      <Modal
+        isOpen={showFormModal}
+        onClose={handleCloseForm}
+        title={editingPledge ? 'Edit Pledge' : 'Add New Pledge'}
+      >
+        <PledgeForm 
+          weddingId={weddingId}
+          pledge={editingPledge}
+          onSave={handleSave}
+          onCancel={handleCloseForm}
+        />
+      </Modal>
+
+      {/* Record Payment Modal */}
       {showPaymentModal && selectedPledge && (
         <PaymentModal 
-            pledge={selectedPledge}
-            weddingId={weddingId}
-            onClose={() => {
+          pledge={selectedPledge}
+          weddingId={weddingId}
+          onClose={() => {
             setShowPaymentModal(false);
             setSelectedPledge(null);
-            }}
-            onSuccess={() => {
+          }}
+          onSuccess={() => {
             loadData();
             setShowPaymentModal(false);
             setSelectedPledge(null);
-            }}
+          }}
         />
-        )}
-
+      )}
     </div>
   );
 };
