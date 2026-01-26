@@ -204,9 +204,16 @@ export const Register = () => {
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                  if (value.length <= 9) {
+                    setPhone(value);
+                  }
+                }}
                 placeholder="712345678"
                 required
+                maxLength={9}
+                pattern="[0-9]{9}"
                 className="phone-number-input"
               />
             </div>
