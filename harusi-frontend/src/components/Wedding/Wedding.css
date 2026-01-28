@@ -179,6 +179,8 @@
     gap: 10px;
     margin-bottom: 20px;
     border-bottom: 2px solid #e5e7eb;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .tab-button {
@@ -190,6 +192,7 @@
     font-weight: 600;
     color: #6b7280;
     transition: all 0.3s;
+    white-space: nowrap;
   }
   
   .tab-button.active {
@@ -210,7 +213,7 @@
   }
 
   .form-actions .primary {
-    background-color: #db2777; /* Pink color matching your theme */
+    background-color: #db2777;
     color: white;
     border: none;
     padding: 12px 24px;
@@ -218,19 +221,149 @@
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.3s;
-}
+  }
 
-.form-actions .primary:hover:not(:disabled) {
-    background-color: #be185d; /* Darker pink on hover */
-}
+  .form-actions .primary:hover:not(:disabled) {
+    background-color: #be185d;
+  }
 
-.form-actions .primary:disabled {
-    background-color: #f3b8d3; /* Lighter pink when disabled */
+  .form-actions .primary:disabled {
+    background-color: #f3b8d3;
     cursor: not-allowed;
-}
+  }
 
-.single-line-header {
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-}
+  .single-line-header {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  /* ============================================
+     MOBILE RESPONSIVE STYLES
+     ============================================ */
+
+  @media (max-width: 768px) {
+    .page-header {
+      margin-bottom: 20px;
+      gap: 15px;
+    }
+
+    .page-header h1 {
+      font-size: 1.5rem;
+      width: 100%;
+    }
+
+    .wedding-grid {
+      grid-template-columns: 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .wedding-card h2 {
+      font-size: 1.1rem;
+    }
+
+    .form-container {
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+
+    .form-container h1 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .form-row .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-actions {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .form-actions button {
+      width: 100%;
+    }
+
+    .wedding-detail {
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+
+    .wedding-detail-header {
+      padding: 25px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .wedding-detail-header h1 {
+      font-size: 1.75rem;
+    }
+
+    .wedding-detail-info {
+      grid-template-columns: 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .info-item {
+      padding: 12px;
+    }
+
+    .info-item p {
+      font-size: 1rem;
+    }
+
+    .tabs {
+      gap: 5px;
+      margin-bottom: 15px;
+    }
+
+    .tab-button {
+      padding: 10px 15px;
+      font-size: 0.875rem;
+    }
+
+    .wedding-card-actions {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .wedding-card-actions .button {
+      width: 100%;
+    }
+
+    .empty-state {
+      padding: 40px 15px;
+    }
+
+    .empty-state p {
+      font-size: 1rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .page-header h1 {
+      font-size: 1.25rem;
+    }
+
+    .wedding-detail-header h1 {
+      font-size: 1.5rem;
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+    }
+
+    .tab-button {
+      padding: 8px 12px;
+      font-size: 0.8rem;
+    }
+  }
